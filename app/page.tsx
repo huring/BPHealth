@@ -1,7 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 function toDateTimeLocalValue(date: Date) {
@@ -10,14 +10,80 @@ function toDateTimeLocalValue(date: Date) {
   return localTime.toISOString().slice(0, 16);
 }
 
+type BloodPressureReading = {
+  id: string;
+  systolic: number;
+  diastolic: number;
+  measured_at: string;
+};
+
+function formatReadingTime(measuredAt: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(measuredAt));
+}
+
 export default function HomePage() {
   const [systolic, setSystolic] = useState("");
   const [diastolic, setDiastolic] = useState("");
   const [measuredAt, setMeasuredAt] = useState(() => toDateTimeLocalValue(new Date()));
   const [status, setStatus] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [readings, setReadings] = useState<BloodPressureReading[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const canSubmit = systolic.trim() !== "" && diastolic.trim() !== "" && measuredAt.trim() !== "";
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadReadings() {
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const { data, error } = await supabase
+          .from("blood_pressure_readings")
+          .select("id, systolic, diastolic, measured_at")
+          .order("measured_at", { ascending: false });
+
+        if (error) {
+          throw error;
+        }
+
+        if (isActive) {
+          setReadings((data ?? []) as BloodPressureReading[]);
+        }
+      } catch (error) {
+        if (isActive) {
+          setStatus(error instanceof Error ? error.message : "Unable to load history.");
+        }
+      } finally {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void loadReadings();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  async function reloadReadings() {
+    const supabase = createSupabaseBrowserClient();
+    const { data, error } = await supabase
+      .from("blood_pressure_readings")
+      .select("id, systolic, diastolic, measured_at")
+      .order("measured_at", { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    setReadings((data ?? []) as BloodPressureReading[]);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -41,6 +107,7 @@ export default function HomePage() {
       setSystolic("");
       setDiastolic("");
       setMeasuredAt(toDateTimeLocalValue(new Date()));
+      await reloadReadings();
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Unable to save reading.");
     } finally {
@@ -104,6 +171,28 @@ export default function HomePage() {
 
           {status ? <p className="status">{status}</p> : null}
         </form>
+      </section>
+
+      <section className="panel">
+        <h2>History</h2>
+        {isLoading ? (
+          <p className="status">Loading readings...</p>
+        ) : readings.length === 0 ? (
+          <p className="status">No readings yet.</p>
+        ) : (
+          <ul className="history-list">
+            {readings.map((reading) => (
+              <li key={reading.id} className="history-item">
+                <div>
+                  <strong>
+                    {reading.systolic}/{reading.diastolic}
+                  </strong>
+                  <p>{formatReadingTime(reading.measured_at)}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </main>
   );

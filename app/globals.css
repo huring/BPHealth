@@ -145,6 +145,30 @@ button:disabled {
   color: var(--muted);
 }
 
+.history-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.history-item {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 16px 18px;
+}
+
+.history-item strong {
+  display: block;
+  font-size: 1.15rem;
+}
+
+.history-item p {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+
 @media (max-width: 640px) {
   .hero,
   .panel {

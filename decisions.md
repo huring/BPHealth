@@ -11,7 +11,7 @@
 
 - [x] Card 01: Schema
 - [x] Card 02: Entry Form
-- [ ] Card 03: History List
+- [x] Card 03: History List
 - [ ] Card 04: Chart
 
 Update this list when a card is implemented and committed.

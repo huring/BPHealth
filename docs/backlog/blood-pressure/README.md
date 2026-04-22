@@ -26,6 +26,6 @@ Blood pressure is the primary focus of the app, so this feature is the foundatio
 ## Cards
 
 1. [card-01-schema.md](./card-01-schema.md) - done
-2. [card-02-entry-form.md](./card-02-entry-form.md) - pending
+2. [card-02-entry-form.md](./card-02-entry-form.md) - done
 3. [card-03-history-list.md](./card-03-history-list.md) - pending
 4. [card-04-chart.md](./card-04-chart.md) - pending

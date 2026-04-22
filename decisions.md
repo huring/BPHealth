@@ -10,7 +10,7 @@
 ## Blood Pressure Card Status
 
 - [x] Card 01: Schema
-- [ ] Card 02: Entry Form
+- [x] Card 02: Entry Form
 - [ ] Card 03: History List
 - [ ] Card 04: Chart
 

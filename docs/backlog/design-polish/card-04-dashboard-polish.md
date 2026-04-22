@@ -8,6 +8,7 @@ Improve the overall dashboard experience.
 
 - Make the dashboard feel cleaner, more modern, and easier to scan
 - Improve hierarchy between chart, recent data, and daily actions
+- Remove the large header/hero and use the BP chart as the top hero element
 - Focus on responsiveness and perceived speed
 
 ## Acceptance Criteria

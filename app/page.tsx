@@ -2,7 +2,10 @@
 
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import {
+  createSupabaseBrowserClient,
+  hasSupabaseConfig,
+} from "@/lib/supabase/client";
 
 function toDateTimeLocalValue(date: Date) {
   const offsetMs = date.getTimezoneOffset() * 60_000;
@@ -25,6 +28,7 @@ function formatReadingTime(measuredAt: string) {
 }
 
 export default function HomePage() {
+  const supabaseConfigured = hasSupabaseConfig();
   const [systolic, setSystolic] = useState("");
   const [diastolic, setDiastolic] = useState("");
   const [measuredAt, setMeasuredAt] = useState(() => toDateTimeLocalValue(new Date()));
@@ -39,8 +43,19 @@ export default function HomePage() {
     let isActive = true;
 
     async function loadReadings() {
+      if (!supabaseConfigured) {
+        if (isActive) {
+          setStatus("Supabase is not configured yet. Add the env vars to enable saving and history.");
+          setIsLoading(false);
+        }
+        return;
+      }
+
       try {
         const supabase = createSupabaseBrowserClient();
+        if (!supabase) {
+          throw new Error("Supabase is not configured yet.");
+        }
         const { data, error } = await supabase
           .from("blood_pressure_readings")
           .select("id, systolic, diastolic, measured_at")
@@ -69,10 +84,13 @@ export default function HomePage() {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [supabaseConfigured]);
 
   async function reloadReadings() {
     const supabase = createSupabaseBrowserClient();
+    if (!supabase) {
+      throw new Error("Supabase is not configured yet.");
+    }
     const { data, error } = await supabase
       .from("blood_pressure_readings")
       .select("id, systolic, diastolic, measured_at")
@@ -88,11 +106,19 @@ export default function HomePage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (!supabaseConfigured) {
+      setStatus("Supabase is not configured yet. Add the env vars to save readings.");
+      return;
+    }
+
     setIsSaving(true);
     setStatus(null);
 
     try {
       const supabase = createSupabaseBrowserClient();
+      if (!supabase) {
+        throw new Error("Supabase is not configured yet.");
+      }
       const { error } = await supabase.from("blood_pressure_readings").insert({
         systolic: Number(systolic),
         diastolic: Number(diastolic),
@@ -128,6 +154,12 @@ export default function HomePage() {
 
       <section className="panel">
         <h2>New reading</h2>
+        {!supabaseConfigured ? (
+          <p className="status">
+            Supabase environment variables are missing. Add `NEXT_PUBLIC_SUPABASE_URL`
+            and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to enable saving and history.
+          </p>
+        ) : null}
         <form className="form" onSubmit={handleSubmit}>
           <label className="field">
             <span>Systolic</span>
@@ -165,7 +197,7 @@ export default function HomePage() {
             />
           </label>
 
-          <button type="submit" disabled={!canSubmit || isSaving}>
+          <button type="submit" disabled={!canSubmit || isSaving || !supabaseConfigured}>
             {isSaving ? "Saving..." : "Save reading"}
           </button>
 

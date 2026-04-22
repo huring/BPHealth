@@ -32,6 +32,10 @@ function formatReadingTime(measuredAt: string) {
   }).format(new Date(measuredAt));
 }
 
+function formatReadingLabel(reading: BloodPressureReading) {
+  return `${reading.systolic}/${reading.diastolic}`;
+}
+
 function getChronologicalReadings(readings: BloodPressureReading[]) {
   return [...readings].sort(
     (left, right) => new Date(left.measured_at).getTime() - new Date(right.measured_at).getTime(),
@@ -239,6 +243,38 @@ export default function HomePage() {
     setReadings((data ?? []) as BloodPressureReading[]);
   }
 
+  async function handleDelete(reading: BloodPressureReading) {
+    if (!supabaseConfigured) {
+      setStatus("Supabase is not configured yet. Add the env vars to delete readings.");
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete ${formatReadingLabel(reading)} from ${formatReadingTime(reading.measured_at)}?`);
+    if (!confirmed) {
+      return;
+    }
+
+    setStatus(null);
+
+    try {
+      const supabase = createSupabaseBrowserClient();
+      if (!supabase) {
+        throw new Error("Supabase is not configured yet.");
+      }
+
+      const { error } = await supabase.from("blood_pressure_readings").delete().eq("id", reading.id);
+
+      if (error) {
+        throw error;
+      }
+
+      await reloadReadings();
+      setStatus("Reading deleted.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Unable to delete reading.");
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -289,6 +325,11 @@ export default function HomePage() {
       </section>
 
       <section className="panel">
+        <h2>Chart</h2>
+        {isLoading ? <p className="status">Loading chart...</p> : <BloodPressureChart readings={readings} />}
+      </section>
+
+      <section className="panel">
         <h2>New reading</h2>
         {!supabaseConfigured ? (
           <p className="status">
@@ -296,10 +337,11 @@ export default function HomePage() {
             and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to enable saving and history.
           </p>
         ) : null}
-        <form className="form" onSubmit={handleSubmit}>
-          <label className="field">
-            <span>Systolic</span>
+        <form className="form form-inline" onSubmit={handleSubmit}>
+          <label className="field field-compact">
+            <span>SYS</span>
             <input
+              aria-label="Systolic"
               inputMode="numeric"
               name="systolic"
               type="number"
@@ -310,9 +352,14 @@ export default function HomePage() {
             />
           </label>
 
-          <label className="field">
-            <span>Diastolic</span>
+          <span className="form-separator" aria-hidden="true">
+            /
+          </span>
+
+          <label className="field field-compact">
+            <span>DIA</span>
             <input
+              aria-label="Diastolic"
               inputMode="numeric"
               name="diastolic"
               type="number"
@@ -323,7 +370,7 @@ export default function HomePage() {
             />
           </label>
 
-          <label className="field">
+          <label className="field field-wide">
             <span>Measured at</span>
             <input
               name="measured_at"
@@ -334,39 +381,44 @@ export default function HomePage() {
           </label>
 
           <button type="submit" disabled={!canSubmit || isSaving || !supabaseConfigured}>
-            {isSaving ? "Saving..." : "Save reading"}
+            {isSaving ? "Saving..." : "Save"}
           </button>
 
           {status ? <p className="status">{status}</p> : null}
         </form>
       </section>
 
-      <section className="panel">
-        <h2>History</h2>
+      <details className="panel history-panel">
+        <summary>
+          <span>History</span>
+          <span className="history-count">{readings.length}</span>
+        </summary>
         {isLoading ? (
-          <p className="status">Loading readings...</p>
+          <p className="status history-copy">Loading readings...</p>
         ) : readings.length === 0 ? (
-          <p className="status">No readings yet.</p>
+          <p className="status history-copy">No readings yet.</p>
         ) : (
           <ul className="history-list">
             {readings.map((reading) => (
               <li key={reading.id} className="history-item">
-                <div>
+                <div className="history-meta">
                   <strong>
-                    {reading.systolic}/{reading.diastolic}
+                    {formatReadingLabel(reading)}
                   </strong>
                   <p>{formatReadingTime(reading.measured_at)}</p>
                 </div>
+                <button
+                  className="history-delete"
+                  type="button"
+                  onClick={() => void handleDelete(reading)}
+                >
+                  Delete
+                </button>
               </li>
             ))}
           </ul>
         )}
-      </section>
-
-      <section className="panel">
-        <h2>Chart</h2>
-        {isLoading ? <p className="status">Loading chart...</p> : <BloodPressureChart readings={readings} />}
-      </section>
+      </details>
     </main>
   );
 }

@@ -6,7 +6,7 @@
 - Keep the architecture minimal
 - No authentication in v1 unless Supabase setup requires it
 - Optimize for fast iteration, not perfect architecture
-- The blood pressure table uses simple anon select/insert policies in v1 so the app can write without auth
+- The blood pressure table uses simple anon select/insert/delete policies in v1 so the app can work without auth
 
 ## Blood Pressure Card Status
 

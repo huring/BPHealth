@@ -169,6 +169,92 @@ button:disabled {
   color: var(--muted);
 }
 
+.chart {
+  display: grid;
+  gap: 14px;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chart-legend i {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.legend-systolic {
+  background: #2e5aac;
+}
+
+.legend-diastolic {
+  background: #ca6b2f;
+}
+
+.chart-svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.chart-grid {
+  stroke: rgba(23, 32, 39, 0.1);
+  stroke-width: 1;
+}
+
+.chart-tick {
+  fill: var(--muted);
+  font-size: 11px;
+}
+
+.chart-line {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chart-line-systolic {
+  stroke: #2e5aac;
+}
+
+.chart-line-diastolic {
+  stroke: #ca6b2f;
+}
+
+.chart-point {
+  stroke: #fff;
+  stroke-width: 2;
+}
+
+.chart-point-systolic {
+  fill: #2e5aac;
+}
+
+.chart-point-diastolic {
+  fill: #ca6b2f;
+}
+
+.chart-footnote {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
 @media (max-width: 640px) {
   .hero,
   .panel {

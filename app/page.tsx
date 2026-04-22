@@ -20,11 +20,147 @@ type BloodPressureReading = {
   measured_at: string;
 };
 
+type ChartPoint = {
+  x: number;
+  y: number;
+};
+
 function formatReadingTime(measuredAt: string) {
   return new Intl.DateTimeFormat("en-US", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(measuredAt));
+}
+
+function getChronologicalReadings(readings: BloodPressureReading[]) {
+  return [...readings].sort(
+    (left, right) => new Date(left.measured_at).getTime() - new Date(right.measured_at).getTime(),
+  );
+}
+
+function buildChartPoints(
+  readings: BloodPressureReading[],
+  accessor: (reading: BloodPressureReading) => number,
+  width: number,
+  height: number,
+  padding: number,
+  minValue: number,
+  maxValue: number,
+) {
+  if (readings.length === 0) {
+    return [];
+  }
+
+  const innerWidth = width - padding * 2;
+  const innerHeight = height - padding * 2;
+  const range = Math.max(maxValue - minValue, 1);
+
+  return readings.map((reading, index) => {
+    const x = readings.length === 1 ? width / 2 : padding + (index / (readings.length - 1)) * innerWidth;
+    const yValue = accessor(reading);
+    const normalized = (yValue - minValue) / range;
+    const y = padding + (1 - normalized) * innerHeight;
+
+    return { x, y };
+  });
+}
+
+function pointsToPath(points: ChartPoint[]) {
+  if (points.length === 0) {
+    return "";
+  }
+
+  return points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
+}
+
+function formatChartTickValue(value: number) {
+  return Math.round(value).toString();
+}
+
+function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) {
+  const chronological = getChronologicalReadings(readings);
+
+  if (chronological.length === 0) {
+    return <p className="status">No chart data yet.</p>;
+  }
+
+  const width = 640;
+  const height = 260;
+  const padding = 28;
+  const allValues = chronological.flatMap((reading) => [reading.systolic, reading.diastolic]);
+  const minValue = Math.min(...allValues) - 10;
+  const maxValue = Math.max(...allValues) + 10;
+  const systolicPoints = buildChartPoints(
+    chronological,
+    (reading) => reading.systolic,
+    width,
+    height,
+    padding,
+    minValue,
+    maxValue,
+  );
+  const diastolicPoints = buildChartPoints(
+    chronological,
+    (reading) => reading.diastolic,
+    width,
+    height,
+    padding,
+    minValue,
+    maxValue,
+  );
+  const yTicks = [maxValue, (maxValue + minValue) / 2, minValue];
+
+  return (
+    <div className="chart">
+      <div className="chart-legend">
+        <span>
+          <i className="legend-systolic" />
+          Systolic
+        </span>
+        <span>
+          <i className="legend-diastolic" />
+          Diastolic
+        </span>
+      </div>
+
+      <svg
+        aria-label="Blood pressure readings over time"
+        className="chart-svg"
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+      >
+        {yTicks.map((tickValue) => {
+          const range = Math.max(maxValue - minValue, 1);
+          const y = padding + (1 - (tickValue - minValue) / range) * (height - padding * 2);
+
+          return (
+            <g key={tickValue}>
+              <line className="chart-grid" x1={padding} x2={width - padding} y1={y} y2={y} />
+              <text className="chart-tick" x={8} y={y + 4}>
+                {formatChartTickValue(tickValue)}
+              </text>
+            </g>
+          );
+        })}
+
+        <path className="chart-line chart-line-systolic" d={pointsToPath(systolicPoints)} />
+        <path className="chart-line chart-line-diastolic" d={pointsToPath(diastolicPoints)} />
+
+        {systolicPoints.map((point, index) => (
+          <circle key={`systolic-${chronological[index].id}`} className="chart-point chart-point-systolic" cx={point.x} cy={point.y} r="3.5" />
+        ))}
+
+        {diastolicPoints.map((point, index) => (
+          <circle key={`diastolic-${chronological[index].id}`} className="chart-point chart-point-diastolic" cx={point.x} cy={point.y} r="3.5" />
+        ))}
+      </svg>
+
+      <div className="chart-footnote">
+        <span>{formatReadingTime(chronological[0].measured_at)}</span>
+        <span>{formatReadingTime(chronological[chronological.length - 1].measured_at)}</span>
+      </div>
+    </div>
+  );
 }
 
 export default function HomePage() {
@@ -225,6 +361,11 @@ export default function HomePage() {
             ))}
           </ul>
         )}
+      </section>
+
+      <section className="panel">
+        <h2>Chart</h2>
+        {isLoading ? <p className="status">Loading chart...</p> : <BloodPressureChart readings={readings} />}
       </section>
     </main>
   );

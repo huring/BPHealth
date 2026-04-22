@@ -20,10 +20,18 @@ type BloodPressureReading = {
   measured_at: string;
 };
 
+type DailyFeeling = "good_productive" | "neutral" | "bad";
+
 type ChartPoint = {
   x: number;
   y: number;
 };
+
+function toDateInputValue(date: Date) {
+  const offsetMs = date.getTimezoneOffset() * 60_000;
+  const localTime = new Date(date.getTime() - offsetMs);
+  return localTime.toISOString().slice(0, 10);
+}
 
 function formatReadingTime(measuredAt: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -34,6 +42,12 @@ function formatReadingTime(measuredAt: string) {
 
 function formatReadingLabel(reading: BloodPressureReading) {
   return `${reading.systolic}/${reading.diastolic}`;
+}
+
+function formatDateLabel(day: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+  }).format(new Date(`${day}T00:00:00`));
 }
 
 function getChronologicalReadings(readings: BloodPressureReading[]) {
@@ -164,6 +178,119 @@ function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) 
         <span>{formatReadingTime(chronological[chronological.length - 1].measured_at)}</span>
       </div>
     </div>
+  );
+}
+
+function DailyFactorsPanel({ supabaseConfigured }: { supabaseConfigured: boolean }) {
+  const [day, setDay] = useState(() => toDateInputValue(new Date()));
+  const [sleptOrNapped, setSleptOrNapped] = useState(false);
+  const [hadAlcohol, setHadAlcohol] = useState(false);
+  const [feeling, setFeeling] = useState<DailyFeeling>("neutral");
+  const [dailyStatus, setDailyStatus] = useState<string | null>(null);
+  const [isSavingDailyFactors, setIsSavingDailyFactors] = useState(false);
+
+  async function handleDailySubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!supabaseConfigured) {
+      setDailyStatus("Supabase is not configured yet. Add the env vars to save daily factors.");
+      return;
+    }
+
+    setIsSavingDailyFactors(true);
+    setDailyStatus(null);
+
+    try {
+      const supabase = createSupabaseBrowserClient();
+      if (!supabase) {
+        throw new Error("Supabase is not configured yet.");
+      }
+
+      const { error } = await supabase.from("daily_factors").upsert(
+        {
+          day,
+          slept_or_napped: sleptOrNapped,
+          had_alcohol: hadAlcohol,
+          feeling,
+        },
+        { onConflict: "day" },
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      setDailyStatus(`Saved daily factors for ${formatDateLabel(day)}.`);
+    } catch (error) {
+      setDailyStatus(error instanceof Error ? error.message : "Unable to save daily factors.");
+    } finally {
+      setIsSavingDailyFactors(false);
+    }
+  }
+
+  return (
+    <section className="panel">
+      <h2>Daily factors</h2>
+      <p className="panel-lede">
+        Keep daily input fast. One row per day is enough for this pass.
+      </p>
+      {!supabaseConfigured ? (
+        <p className="status">
+          Supabase environment variables are missing. Add `NEXT_PUBLIC_SUPABASE_URL` and
+          `NEXT_PUBLIC_SUPABASE_ANON_KEY` to enable saving daily factors.
+        </p>
+      ) : null}
+      <form className="form daily-form" onSubmit={handleDailySubmit}>
+        <label className="field daily-date">
+          <span>Day</span>
+          <input
+            name="day"
+            type="date"
+            value={day}
+            onChange={(event) => setDay(event.target.value)}
+          />
+        </label>
+
+        <label className="daily-toggle">
+          <input
+            checked={sleptOrNapped}
+            name="slept_or_napped"
+            type="checkbox"
+            onChange={(event) => setSleptOrNapped(event.target.checked)}
+          />
+          <span>Slept or napped</span>
+        </label>
+
+        <label className="daily-toggle">
+          <input
+            checked={hadAlcohol}
+            name="had_alcohol"
+            type="checkbox"
+            onChange={(event) => setHadAlcohol(event.target.checked)}
+          />
+          <span>Alcohol that day</span>
+        </label>
+
+        <label className="field daily-feeling">
+          <span>Feeling</span>
+          <select
+            name="feeling"
+            value={feeling}
+            onChange={(event) => setFeeling(event.target.value as DailyFeeling)}
+          >
+            <option value="good_productive">Good / productive</option>
+            <option value="neutral">Neutral</option>
+            <option value="bad">Bad</option>
+          </select>
+        </label>
+
+        <button type="submit" disabled={isSavingDailyFactors || !supabaseConfigured}>
+          {isSavingDailyFactors ? "Saving..." : "Save day"}
+        </button>
+
+        {dailyStatus ? <p className="status">{dailyStatus}</p> : null}
+      </form>
+    </section>
   );
 }
 
@@ -419,6 +546,8 @@ export default function HomePage() {
           </ul>
         )}
       </details>
+
+      <DailyFactorsPanel supabaseConfigured={supabaseConfigured} />
     </main>
   );
 }

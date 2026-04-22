@@ -29,4 +29,4 @@ These factors help explain patterns around blood pressure without adding much in
 
 1. [card-01-schema.md](./card-01-schema.md) - done
 2. [card-02-input-ui.md](./card-02-input-ui.md) - done
-3. [card-03-edit-update.md](./card-03-edit-update.md) - pending
+3. [card-03-edit-update.md](./card-03-edit-update.md) - done

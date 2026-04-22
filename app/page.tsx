@@ -22,6 +22,13 @@ type BloodPressureReading = {
 
 type DailyFeeling = "good_productive" | "neutral" | "bad";
 
+type DailyFactorRow = {
+  day: string;
+  slept_or_napped: boolean;
+  had_alcohol: boolean;
+  feeling: DailyFeeling;
+};
+
 type ChartPoint = {
   x: number;
   y: number;
@@ -187,7 +194,69 @@ function DailyFactorsPanel({ supabaseConfigured }: { supabaseConfigured: boolean
   const [hadAlcohol, setHadAlcohol] = useState(false);
   const [feeling, setFeeling] = useState<DailyFeeling>("neutral");
   const [dailyStatus, setDailyStatus] = useState<string | null>(null);
+  const [isLoadingDailyFactors, setIsLoadingDailyFactors] = useState(false);
   const [isSavingDailyFactors, setIsSavingDailyFactors] = useState(false);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadDailyFactors() {
+      if (!supabaseConfigured) {
+        return;
+      }
+
+      setIsLoadingDailyFactors(true);
+      setDailyStatus(null);
+
+      try {
+        const supabase = createSupabaseBrowserClient();
+        if (!supabase) {
+          throw new Error("Supabase is not configured yet.");
+        }
+
+        const { data, error } = await supabase
+          .from("daily_factors")
+          .select("day, slept_or_napped, had_alcohol, feeling")
+          .eq("day", day)
+          .maybeSingle();
+
+        if (error) {
+          throw error;
+        }
+
+        if (!isActive) {
+          return;
+        }
+
+        if (data) {
+          const row = data as DailyFactorRow;
+          setSleptOrNapped(row.slept_or_napped);
+          setHadAlcohol(row.had_alcohol);
+          setFeeling(row.feeling);
+          setDailyStatus(`Loaded saved factors for ${formatDateLabel(day)}.`);
+        } else {
+          setSleptOrNapped(false);
+          setHadAlcohol(false);
+          setFeeling("neutral");
+          setDailyStatus(`No saved factors for ${formatDateLabel(day)} yet.`);
+        }
+      } catch (error) {
+        if (isActive) {
+          setDailyStatus(error instanceof Error ? error.message : "Unable to load daily factors.");
+        }
+      } finally {
+        if (isActive) {
+          setIsLoadingDailyFactors(false);
+        }
+      }
+    }
+
+    void loadDailyFactors();
+
+    return () => {
+      isActive = false;
+    };
+  }, [day, supabaseConfigured]);
 
   async function handleDailySubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -285,7 +354,7 @@ function DailyFactorsPanel({ supabaseConfigured }: { supabaseConfigured: boolean
         </label>
 
         <button type="submit" disabled={isSavingDailyFactors || !supabaseConfigured}>
-          {isSavingDailyFactors ? "Saving..." : "Save day"}
+          {isSavingDailyFactors ? "Saving..." : isLoadingDailyFactors ? "Loading..." : "Save day"}
         </button>
 
         {dailyStatus ? <p className="status">{dailyStatus}</p> : null}

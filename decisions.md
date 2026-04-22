@@ -7,3 +7,11 @@
 - No authentication in v1 unless Supabase setup requires it
 - Optimize for fast iteration, not perfect architecture
 
+## Blood Pressure Card Status
+
+- [x] Card 01: Schema
+- [ ] Card 02: Entry Form
+- [ ] Card 03: History List
+- [ ] Card 04: Chart
+
+Update this list when a card is implemented and committed.

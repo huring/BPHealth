@@ -16,4 +16,10 @@
 - [x] Card 03: History List
 - [x] Card 04: Chart
 
+## Daily Factors Card Status
+
+- [x] Card 01: Schema
+- [ ] Card 02: Input UI
+- [ ] Card 03: Edit Update
+
 Update this list when a card is implemented and committed.

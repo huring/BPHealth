@@ -451,22 +451,13 @@ button:focus-visible {
 
 .chart-stage {
   position: relative;
-  overflow: clip;
+  overflow: visible;
   border: 0;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
   padding: 0;
   min-width: 0;
-}
-
-.chart-meta {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: flex-start;
-  min-width: 0;
-  flex-wrap: wrap;
 }
 
 .chart-average {
@@ -493,46 +484,63 @@ button:focus-visible {
   color: var(--ink);
 }
 
-.chart-selection {
+.chart-selection-chip {
+  position: absolute;
+  z-index: 2;
   display: grid;
   gap: 2px;
-  justify-items: end;
-  text-align: right;
-  padding: 0;
+  justify-items: start;
+  text-align: left;
+  padding: 8px 10px;
   border: 0;
-  border-radius: 0;
-  background: transparent;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(251, 113, 133, 0.98), rgba(220, 38, 38, 0.98));
+  color: #fff;
   min-width: 0;
-  color: var(--muted);
+  max-width: min(58vw, 220px);
+  box-shadow: 0 18px 36px rgba(220, 38, 38, 0.26);
   transition:
     transform 140ms ease,
     border-color 140ms ease,
     background-color 140ms ease,
-    box-shadow 140ms ease;
-  max-width: 100%;
+    box-shadow 140ms ease,
+    opacity 140ms ease;
+  transform: translate(-50%, calc(-100% - 8px));
+  pointer-events: auto;
 }
 
-.chart-selection:hover,
-.chart-selection:focus-visible {
-  transform: translateY(-1px);
-  border-color: transparent;
-  box-shadow: none;
+.chart-selection-chip::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  background: inherit;
+  transform: translateX(-50%) rotate(45deg);
+  border-radius: 2px;
+  box-shadow: 4px 4px 14px rgba(220, 38, 38, 0.12);
 }
 
-.chart-selection span {
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+.chart-selection-chip--below {
+  transform: translate(-50%, 8px);
 }
 
-.chart-selection strong {
-  font-size: 1rem;
-  color: var(--ink);
+.chart-selection-chip--below::after {
+  top: -6px;
+  bottom: auto;
 }
 
-.chart-selection small {
-  color: var(--muted);
-  font-size: 0.8rem;
+.chart-selection-chip strong {
+  font-size: 0.95rem;
+  line-height: 1.05;
+  color: #fff;
+}
+
+.chart-selection-chip small {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.75rem;
+  line-height: 1.15;
 }
 
 .chart-ranges {
@@ -569,6 +577,7 @@ button:focus-visible {
   stroke: rgba(255, 255, 255, 0.08);
   stroke-width: 1;
   cursor: pointer;
+  filter: drop-shadow(0 6px 10px rgba(8, 12, 18, 0.22));
   transition:
     opacity 140ms ease,
     fill 140ms ease,
@@ -612,14 +621,16 @@ button:focus-visible {
 }
 
 .chart-selected .chart-range-body {
-  fill: url(#bp-range-fill);
-  stroke: rgba(255, 255, 255, 0.18);
+  fill: url(#bp-range-selected-fill);
+  stroke: rgba(255, 255, 255, 0.22);
+  filter: drop-shadow(0 8px 14px rgba(220, 38, 38, 0.22));
 }
 
 .chart-selected .chart-range-point-systolic,
 .chart-selected .chart-range-point-diastolic {
   stroke-width: 3;
   transform: scale(1.1);
+  fill: #fb7185;
 }
 
 .chart-dimmed .chart-range-body,
@@ -640,8 +651,30 @@ button:focus-visible {
   outline: none;
 }
 
-.chart-selection:active {
-  transform: translateY(1px);
+.chart-selection-chip:hover,
+.chart-selection-chip:focus-visible {
+  transform: translate(-50%, calc(-100% - 10px));
+  border-color: transparent;
+  box-shadow: 0 20px 40px rgba(220, 38, 38, 0.34);
+}
+
+.chart-selection-chip--below:hover,
+.chart-selection-chip--below:focus-visible {
+  transform: translate(-50%, 10px);
+}
+
+.chart-selection-chip:active {
+  transform: translate(-50%, calc(-100% - 6px));
+  box-shadow: 0 14px 30px rgba(220, 38, 38, 0.24);
+}
+
+.chart-selection-chip--below:active {
+  transform: translate(-50%, 6px);
+}
+
+.chart-selection-chip:focus-visible {
+  outline: 2px solid rgba(251, 113, 133, 0.5);
+  outline-offset: 2px;
 }
 
 .chart-footnote {
@@ -1082,5 +1115,14 @@ button:focus-visible {
 
   .hero-stat-value {
     font-size: clamp(1.9rem, 9vw, 2.6rem);
+  }
+
+  .chart-axis-label {
+    font-size: 10px;
+  }
+
+  .chart-selection-chip {
+    max-width: min(64vw, 200px);
+    padding: 7px 9px;
   }
 }

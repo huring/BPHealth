@@ -28,7 +28,7 @@ Blood pressure readings are naturally range-based. Showing systolic and diastoli
 ## Card Status
 - [x] Card 01: Chart Range Geometry
 - [x] Card 02: Selection and Interaction
-- [ ] Card 03: Axis Density and Spacing
+- [x] Card 03: Axis Density and Spacing
 - [ ] Card 04: Visual Polish
 
 ## Out Of Scope

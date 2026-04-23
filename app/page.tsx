@@ -629,9 +629,13 @@ function BloodPressureChart({
   const height = 324;
   const padding = 32;
   const axisY = height - 34;
+  const innerWidth = width - padding * 2;
   const allValues = rangeReadings.flatMap((reading) => [reading.systolic, reading.diastolic]);
   const minValue = Math.min(...allValues) - 10;
   const maxValue = Math.max(...allValues) + 10;
+  const chartPointSpacing = rangeReadings.length > 1 ? innerWidth / (rangeReadings.length - 1) : innerWidth;
+  const rangeBodyWidth = Math.max(10, Math.min(16, chartPointSpacing * 0.34));
+  const rangeBodyRadius = Math.min(rangeBodyWidth / 2, 8);
   const systolicPoints = buildChartPoints(
     rangeReadings,
     (reading) => reading.systolic,
@@ -651,17 +655,31 @@ function BloodPressureChart({
     maxValue,
   );
   const yTicks = [maxValue, (maxValue + minValue) / 2, minValue];
-  const axisTickIndexes = getChartAxisTickIndexes(rangeReadings.length);
+  const axisTickIndexes = getChartAxisTickIndexes(rangeReadings.length, chartPointSpacing < 72 ? 4 : 5);
   const selectedReading = rangeReadings.find((reading) => reading.id === selectedReadingId) ?? null;
+  const selectedReadingIndex = selectedReading
+    ? rangeReadings.findIndex((reading) => reading.id === selectedReading.id)
+    : -1;
+  const selectedSystolicPoint = selectedReadingIndex >= 0 ? systolicPoints[selectedReadingIndex] : null;
+  const selectedDiastolicPoint = selectedReadingIndex >= 0 ? diastolicPoints[selectedReadingIndex] : null;
+  const selectedChipPosition =
+    selectedReading && selectedSystolicPoint && selectedDiastolicPoint
+      ? {
+          x: Math.min(width - 110, Math.max(110, selectedSystolicPoint.x)),
+          y: Math.min(selectedSystolicPoint.y, selectedDiastolicPoint.y),
+        }
+      : null;
+  const selectedChipPlacement =
+    selectedChipPosition && selectedChipPosition.y < 76 ? "below" : "above";
 
   function handleReadingSelect(readingId: string) {
-    setSelectedReadingId(readingId);
+    setSelectedReadingId((current) => (current === readingId ? null : readingId));
   }
 
   function handleReadingKeyDown(event: KeyboardEvent<SVGElement>, readingId: string) {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      setSelectedReadingId(readingId);
+      handleReadingSelect(readingId);
     }
   }
 
@@ -681,22 +699,24 @@ function BloodPressureChart({
         ))}
       </div>
 
-      <div className="chart-meta">
-        {selectedReading ? (
+      <div className="chart-stage">
+        {selectedReading && selectedChipPosition ? (
           <button
-            className="chart-selection"
+            className={`chart-selection-chip chart-selection-chip--${selectedChipPlacement}`}
             type="button"
+            style={{
+              left: `${(selectedChipPosition.x / width) * 100}%`,
+              top: `${(selectedChipPosition.y / height) * 100}%`,
+            }}
+            aria-label={`Deselect reading ${formatReadingLabel(selectedReading)} from ${formatReadingTime(selectedReading.measured_at, preferRelativeDates)}`}
+            aria-pressed="true"
             onClick={() => handleReadingSelect(selectedReading.id)}
-            aria-label={`Selected reading ${formatReadingLabel(selectedReading)} from ${formatReadingTime(selectedReading.measured_at, preferRelativeDates)}`}
           >
-            <span>Selected</span>
             <strong>{formatReadingLabel(selectedReading)}</strong>
             <small suppressHydrationWarning>{formatReadingTime(selectedReading.measured_at, preferRelativeDates)}</small>
           </button>
         ) : null}
-      </div>
 
-      <div className="chart-stage">
         <svg
           aria-label="Blood pressure readings over time"
           className="chart-svg"
@@ -707,6 +727,10 @@ function BloodPressureChart({
             <linearGradient id="bp-range-fill" x1="0" x2="0" y1="0" y2="1">
               <stop offset="0%" stopColor="#a855f7" stopOpacity="0.8" />
               <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.8" />
+            </linearGradient>
+            <linearGradient id="bp-range-selected-fill" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#f97373" stopOpacity="0.95" />
+              <stop offset="100%" stopColor="#dc2626" stopOpacity="0.95" />
             </linearGradient>
           </defs>
 
@@ -729,9 +753,9 @@ function BloodPressureChart({
             const diastolicPoint = diastolicPoints[index];
             const topY = Math.min(systolicPoint.y, diastolicPoint.y);
             const bottomY = Math.max(systolicPoint.y, diastolicPoint.y);
-            const bodyHeight = Math.max(bottomY - topY, 14);
+            const bodyHeight = Math.max(bottomY - topY, rangeBodyWidth);
             const bodyY = (topY + bottomY) / 2 - bodyHeight / 2;
-            const bodyX = systolicPoint.x - 7;
+            const bodyX = systolicPoint.x - rangeBodyWidth / 2;
             const isSelected = reading.id === selectedReadingId;
             const rangeState = selectedReadingId ? (isSelected ? "chart-selected" : "chart-dimmed") : "";
 
@@ -741,11 +765,12 @@ function BloodPressureChart({
                   className="chart-range-body"
                   x={bodyX}
                   y={bodyY}
-                  width={14}
+                  width={rangeBodyWidth}
                   height={bodyHeight}
-                  rx={7}
+                  rx={rangeBodyRadius}
                   role="button"
                   tabIndex={0}
+                  aria-pressed={isSelected}
                   aria-label={`Select range ${formatReadingLabel(reading)} on ${formatChartAxisLabel(reading.measured_at)}`}
                   onClick={() => handleReadingSelect(reading.id)}
                   onKeyDown={(event) => handleReadingKeyDown(event, reading.id)}
@@ -757,6 +782,7 @@ function BloodPressureChart({
                   r={isSelected ? "5.6" : "4.5"}
                   role="button"
                   tabIndex={0}
+                  aria-pressed={isSelected}
                   aria-label={`Select systolic ${reading.systolic} on ${formatChartAxisLabel(reading.measured_at)}`}
                   onClick={() => handleReadingSelect(reading.id)}
                   onKeyDown={(event) => handleReadingKeyDown(event, reading.id)}
@@ -768,6 +794,7 @@ function BloodPressureChart({
                   r={isSelected ? "5.6" : "4.5"}
                   role="button"
                   tabIndex={0}
+                  aria-pressed={isSelected}
                   aria-label={`Select diastolic ${reading.diastolic} on ${formatChartAxisLabel(reading.measured_at)}`}
                   onClick={() => handleReadingSelect(reading.id)}
                   onKeyDown={(event) => handleReadingKeyDown(event, reading.id)}

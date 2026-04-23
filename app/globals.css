@@ -695,7 +695,7 @@ button:focus-visible {
   bottom: 8px;
   font-size: 0.62rem;
   line-height: 1;
-  font-weight: 700;
+  font-weight: 500;
   color: color-mix(in srgb, var(--muted) 82%, white 18%);
   letter-spacing: 0.02em;
   text-align: center;

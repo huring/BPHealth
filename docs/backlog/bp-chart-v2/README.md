@@ -38,6 +38,6 @@ Create a more premium, mobile-first blood pressure chart that is easier to read 
 ## Card Status
 
 1. Card 01: Done
-2. Card 02: Pending
+2. Card 02: Done
 3. Card 03: Pending
 4. Card 04: Pending

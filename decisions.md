@@ -6,6 +6,7 @@
 - Keep the architecture minimal
 - No authentication in v1 unless Supabase setup requires it
 - Optimize for fast iteration, not perfect architecture
+- Always create a feature branch before implementation work, even when the user does not explicitly request one
 - The blood pressure table uses simple anon select/insert/delete policies in v1 so the app can work without auth
 - When a feature is merged to `main`, move its docs from `docs/backlog/` to `docs/completed/`
 - The daily factors table uses simple anon select/insert/update policies in v1 so the app can save one row per day without auth
@@ -33,7 +34,7 @@
 ## BP Chart V2 Card Status
 
 - [x] Card 01: Chart Structure
-- [ ] Card 02: Visual Style
+- [x] Card 02: Visual Style
 - [ ] Card 03: Interactions
 - [ ] Card 04: Time Range Controls
 

@@ -203,6 +203,7 @@ function ChipButton({
 function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) {
   const chronological = getChronologicalReadings(readings);
   const averageReading = getAverageReading(chronological);
+  const latestReading = chronological[chronological.length - 1] ?? null;
 
   if (chronological.length === 0) {
     return <p className="status">No chart data yet.</p>;
@@ -238,6 +239,24 @@ function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) 
 
   return (
     <div className="chart">
+      {latestReading ? (
+        <div className="chart-hero">
+          <div>
+            <p className="chart-hero-label">Latest reading</p>
+            <p className="chart-hero-value">
+              {formatReadingLabel(latestReading)} <span>mmHg</span>
+            </p>
+          </div>
+
+          {averageReading ? (
+            <div className="chart-average" aria-label={`Average blood pressure ${averageReading.systolic}/${averageReading.diastolic}`}>
+              <span>Average</span>
+              <strong>{formatAverageLabel(averageReading)}</strong>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="chart-meta">
         <div className="chart-legend">
           <span>
@@ -249,67 +268,62 @@ function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) 
             Diastolic
           </span>
         </div>
-
-        {averageReading ? (
-          <div className="chart-average" aria-label={`Average blood pressure ${averageReading.systolic}/${averageReading.diastolic}`}>
-            <span>Average</span>
-            <strong>{formatAverageLabel(averageReading)}</strong>
-          </div>
-        ) : null}
       </div>
 
-      <svg
-        aria-label="Blood pressure readings over time"
-        className="chart-svg"
-        viewBox={`0 0 ${width} ${height}`}
-        role="img"
-      >
-        {yTicks.map((tickValue) => {
-          const range = Math.max(maxValue - minValue, 1);
-          const y = padding + (1 - (tickValue - minValue) / range) * (height - padding * 2);
+      <div className="chart-stage">
+        <svg
+          aria-label="Blood pressure readings over time"
+          className="chart-svg"
+          viewBox={`0 0 ${width} ${height}`}
+          role="img"
+        >
+          {yTicks.map((tickValue) => {
+            const range = Math.max(maxValue - minValue, 1);
+            const y = padding + (1 - (tickValue - minValue) / range) * (height - padding * 2);
 
-          return (
-            <g key={tickValue}>
-              <line className="chart-grid" x1={padding} x2={width - padding} y1={y} y2={y} />
-              <text className="chart-tick" x={8} y={y + 4}>
-                {formatChartTickValue(tickValue)}
-              </text>
-            </g>
-          );
-        })}
+            return (
+              <g key={tickValue}>
+                <line className="chart-grid" x1={padding} x2={width - padding} y1={y} y2={y} />
+                <text className="chart-tick" x={8} y={y + 4}>
+                  {formatChartTickValue(tickValue)}
+                </text>
+              </g>
+            );
+          })}
 
-        {chronological.map((reading, index) => {
-          const systolicPoint = systolicPoints[index];
-          const diastolicPoint = diastolicPoints[index];
-          const topY = Math.min(systolicPoint.y, diastolicPoint.y);
-          const bottomY = Math.max(systolicPoint.y, diastolicPoint.y);
+          {chronological.map((reading, index) => {
+            const systolicPoint = systolicPoints[index];
+            const diastolicPoint = diastolicPoints[index];
+            const topY = Math.min(systolicPoint.y, diastolicPoint.y);
+            const bottomY = Math.max(systolicPoint.y, diastolicPoint.y);
 
-          return (
-            <g key={`range-${reading.id}`}>
-              <line className="chart-range" x1={systolicPoint.x} x2={diastolicPoint.x} y1={topY} y2={bottomY} />
-              <circle className="chart-range-point chart-range-point-systolic" cx={systolicPoint.x} cy={systolicPoint.y} r="4.5" />
-              <circle className="chart-range-point chart-range-point-diastolic" cx={diastolicPoint.x} cy={diastolicPoint.y} r="4.5" />
-            </g>
-          );
-        })}
+            return (
+              <g key={`range-${reading.id}`}>
+                <line className="chart-range" x1={systolicPoint.x} x2={diastolicPoint.x} y1={topY} y2={bottomY} />
+                <circle className="chart-range-point chart-range-point-systolic" cx={systolicPoint.x} cy={systolicPoint.y} r="4.5" />
+                <circle className="chart-range-point chart-range-point-diastolic" cx={diastolicPoint.x} cy={diastolicPoint.y} r="4.5" />
+              </g>
+            );
+          })}
 
-        <path className="chart-line chart-line-systolic" d={pointsToPath(systolicPoints)} />
-        <path className="chart-line chart-line-diastolic" d={pointsToPath(diastolicPoints)} />
+          <path className="chart-line chart-line-systolic" d={pointsToPath(systolicPoints)} />
+          <path className="chart-line chart-line-diastolic" d={pointsToPath(diastolicPoints)} />
 
-        {axisTickIndexes.map((index) => {
-          const point = chronological[index];
-          const chartPoint = systolicPoints[index];
+          {axisTickIndexes.map((index) => {
+            const point = chronological[index];
+            const chartPoint = systolicPoints[index];
 
-          return (
-            <g key={`axis-${point.id}`}>
-              <line className="chart-axis-tick" x1={chartPoint.x} x2={chartPoint.x} y1={axisY} y2={axisY + 8} />
-              <text className="chart-axis-label" x={chartPoint.x} y={axisY + 24} textAnchor="middle">
-                {formatChartAxisLabel(point.measured_at)}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
+            return (
+              <g key={`axis-${point.id}`}>
+                <line className="chart-axis-tick" x1={chartPoint.x} x2={chartPoint.x} y1={axisY} y2={axisY + 8} />
+                <text className="chart-axis-label" x={chartPoint.x} y={axisY + 24} textAnchor="middle">
+                  {formatChartAxisLabel(point.measured_at)}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
     </div>
   );
 }

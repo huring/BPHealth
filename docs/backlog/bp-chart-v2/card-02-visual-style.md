@@ -18,6 +18,10 @@ Define the visual appearance of the improved chart.
 - Contrast is strong without feeling harsh
 - The styling fits naturally into the dark-mode UI direction
 
+## Status
+
+- Done
+
 ## Notes
 
 - Avoid decorative clutter that makes the data harder to read

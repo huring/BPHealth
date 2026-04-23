@@ -1,5 +1,7 @@
 # Card 01: Mobile First Layout
 
+Status: done
+
 ## Objective
 
 Adapt the app layout for mobile-only use.
@@ -18,5 +20,5 @@ Adapt the app layout for mobile-only use.
 
 ## Notes
 
+- Implemented in [`app/page.tsx`](../../../app/page.tsx) and [`app/globals.css`](../../../app/globals.css)
 - Keep this focused on structure and hierarchy, not visual styling details
-

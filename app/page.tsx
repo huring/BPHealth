@@ -298,7 +298,7 @@ function DailyFactorsPanel({ supabaseConfigured }: { supabaseConfigured: boolean
   }
 
   return (
-    <section className="panel">
+    <section className="panel" id="daily-factors">
       <h2>Daily factors</h2>
       <p className="panel-lede">
         Keep daily input fast. One row per day is enough for this pass.
@@ -510,17 +510,23 @@ export default function HomePage() {
   }
 
   return (
-    <main className="shell">
-      <section className="hero">
+    <main className="shell app-shell">
+      <header className="hero app-header">
         <p className="eyebrow">BPHealth</p>
-        <h1>Log a blood pressure reading.</h1>
+        <h1>Today at a glance.</h1>
         <p className="lede">
-          This first form writes directly to Supabase so we can validate the data flow
-          before adding history or charts.
+          Mobile-first tracking for blood pressure and daily factors, with the most
+          important actions always within thumb reach.
         </p>
-      </section>
+      </header>
 
-      <section className="panel">
+      <nav className="section-nav" aria-label="Quick sections">
+        <a href="#chart">Chart</a>
+        <a href="#daily-factors">Daily</a>
+        <a href="#history">History</a>
+      </nav>
+
+      <section className="panel" id="chart">
         <h2>Chart</h2>
         {isLoading ? <p className="status">Loading chart...</p> : <BloodPressureChart readings={readings} />}
       </section>
@@ -580,11 +586,11 @@ export default function HomePage() {
             {isSaving ? "Saving..." : "Save"}
           </button>
 
-          {status ? <p className="status">{status}</p> : null}
-        </form>
+        {status ? <p className="status">{status}</p> : null}
+      </form>
       </section>
 
-      <details className="panel history-panel">
+      <details className="panel history-panel" id="history">
         <summary>
           <span>History</span>
           <span className="history-count">{readings.length}</span>

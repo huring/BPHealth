@@ -1,7 +1,7 @@
 "use client";
 
 import type { FormEvent, KeyboardEvent, ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   createSupabaseBrowserClient,
   hasSupabaseConfig,
@@ -80,6 +80,36 @@ function getBloodPressurePeriodTime(period: BloodPressurePeriod) {
   }
 
   return "18:00:00";
+}
+
+function getClockHour(date: Date, timeZone?: string) {
+  try {
+    return Number(
+      new Intl.DateTimeFormat("en-US", {
+        hour: "2-digit",
+        hour12: false,
+        timeZone,
+      }).format(date),
+    );
+  } catch {
+    return null;
+  }
+}
+
+function getDefaultBloodPressurePeriod(date = new Date()) {
+  const localTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const hour =
+    getClockHour(date, localTimeZone) ?? getClockHour(date, "Europe/Stockholm") ?? date.getHours();
+
+  if (hour >= 5 && hour < 11) {
+    return "morning";
+  }
+
+  if (hour >= 11 && hour < 17) {
+    return "lunch";
+  }
+
+  return "evening";
 }
 
 function getBloodPressureMeasuredAt(day: string, period: BloodPressurePeriod) {
@@ -334,6 +364,198 @@ function AppShellNav({
         </button>
       ))}
     </nav>
+  );
+}
+
+function BloodPressureEntryModal({
+  isMounted,
+  isOpen,
+  supabaseConfigured,
+  isSaving,
+  status,
+  systolic,
+  setSystolic,
+  diastolic,
+  setDiastolic,
+  measuredDay,
+  setMeasuredDay,
+  measuredPeriod,
+  setMeasuredPeriod,
+  onClose,
+  onSubmit,
+}: {
+  isMounted: boolean;
+  isOpen: boolean;
+  supabaseConfigured: boolean;
+  isSaving: boolean;
+  status: string | null;
+  systolic: string;
+  setSystolic: (value: string) => void;
+  diastolic: string;
+  setDiastolic: (value: string) => void;
+  measuredDay: string;
+  setMeasuredDay: (value: string) => void;
+  measuredPeriod: BloodPressurePeriod;
+  setMeasuredPeriod: (value: BloodPressurePeriod) => void;
+  onClose: () => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  const systolicInputRef = useRef<HTMLInputElement>(null);
+  const diastolicInputRef = useRef<HTMLInputElement>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const raf = window.requestAnimationFrame(() => {
+      systolicInputRef.current?.focus();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(raf);
+    };
+  }, [isOpen]);
+
+  if (!isMounted) {
+    return null;
+  }
+
+  const periods: BloodPressurePeriod[] = ["morning", "lunch", "evening"];
+
+  return (
+    <div
+      className={`entry-modal${isOpen ? " entry-modal-open" : " entry-modal-closing"}`}
+      aria-hidden={!isOpen}
+    >
+      <button
+        aria-label="Close measurement modal"
+        className="entry-modal-backdrop"
+        type="button"
+        onClick={onClose}
+      />
+
+      <section
+        aria-labelledby="entry-modal-title"
+        aria-modal="true"
+        className="entry-modal-panel"
+        role="dialog"
+      >
+        <header className="entry-modal-header">
+          <div>
+            <p className="eyebrow">Add measurement</p>
+            <h2 className="entry-modal-title" id="entry-modal-title">
+              Blood pressure
+            </h2>
+          </div>
+
+          <button
+            aria-label="Close measurement modal"
+            className="entry-modal-close"
+            type="button"
+            onClick={onClose}
+          >
+            ×
+          </button>
+        </header>
+
+        <form className="entry-modal-form" onSubmit={onSubmit}>
+          <div className="entry-modal-body">
+            {!supabaseConfigured ? (
+              <p className="status">
+                Supabase environment variables are missing. Add `NEXT_PUBLIC_SUPABASE_URL`
+                and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to enable saving.
+              </p>
+            ) : null}
+
+            <div className="entry-modal-grid">
+              <label className="field field-compact entry-modal-field">
+                <span>SYS</span>
+                <input
+                  ref={systolicInputRef}
+                  aria-label="Systolic"
+                  autoComplete="off"
+                  enterKeyHint="next"
+                  inputMode="numeric"
+                  name="systolic"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={systolic}
+                  onChange={(event) => setSystolic(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      diastolicInputRef.current?.focus();
+                    }
+                  }}
+                />
+              </label>
+
+              <label className="field field-compact entry-modal-field">
+                <span>DIA</span>
+                <input
+                  ref={diastolicInputRef}
+                  aria-label="Diastolic"
+                  autoComplete="off"
+                  enterKeyHint="next"
+                  inputMode="numeric"
+                  name="diastolic"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={diastolic}
+                  onChange={(event) => setDiastolic(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      dateInputRef.current?.focus();
+                    }
+                  }}
+                />
+              </label>
+
+              <label className="field field-wide entry-modal-field entry-modal-date">
+                <span>Date</span>
+                <input
+                  ref={dateInputRef}
+                  enterKeyHint="done"
+                  name="measured_day"
+                  type="date"
+                  value={measuredDay}
+                  onChange={(event) => setMeasuredDay(event.target.value)}
+                />
+              </label>
+            </div>
+
+            <div className="segmented-stack">
+              <span className="field-label">Time of day</span>
+              <div className="segmented" role="radiogroup" aria-label="Time of day">
+                {periods.map((period) => (
+                  <button
+                    key={period}
+                    aria-pressed={measuredPeriod === period}
+                    className={`segmented-option${measuredPeriod === period ? " segmented-option-active" : ""}`}
+                    type="button"
+                    onClick={() => setMeasuredPeriod(period)}
+                  >
+                    {getBloodPressurePeriodLabel(period)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <footer className="entry-modal-footer">
+            {status ? <p className="status">{status}</p> : null}
+            <button className="entry-modal-submit" type="submit" disabled={!supabaseConfigured || isSaving}>
+              {isSaving ? "Saving..." : "Add measurement"}
+            </button>
+          </footer>
+        </form>
+      </section>
+    </div>
   );
 }
 
@@ -785,21 +1007,25 @@ function DailyFactorsPanel({ supabaseConfigured }: { supabaseConfigured: boolean
 
 export default function HomePage() {
   const supabaseConfigured = hasSupabaseConfig();
+  const addMeasurementButtonRef = useRef<HTMLButtonElement>(null);
   const [systolic, setSystolic] = useState("");
   const [diastolic, setDiastolic] = useState("");
   const [measuredDay, setMeasuredDay] = useState(() => toDateInputValue(new Date()));
-  const [measuredPeriod, setMeasuredPeriod] = useState<BloodPressurePeriod>("morning");
+  const [measuredPeriod, setMeasuredPeriod] = useState<BloodPressurePeriod>(() =>
+    getDefaultBloodPressurePeriod(),
+  );
   const [status, setStatus] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [readings, setReadings] = useState<BloodPressureReading[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeSection, setActiveSection] = useState<ShellSection>("latest");
   const [isOnline, setIsOnline] = useState(true);
+  const [isAddModalMounted, setIsAddModalMounted] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const addModalCloseTimer = useRef<number | null>(null);
   const chronologicalReadings = getChronologicalReadings(readings);
   const latestReading = chronologicalReadings[chronologicalReadings.length - 1] ?? null;
   const averageReading = getAverageReading(chronologicalReadings);
-
-  const canSubmit = systolic.trim() !== "" && diastolic.trim() !== "" && measuredDay.trim() !== "";
 
   useEffect(() => {
     let isActive = true;
@@ -911,6 +1137,76 @@ export default function HomePage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isAddModalMounted) {
+      return;
+    }
+
+    const raf = window.requestAnimationFrame(() => {
+      setIsAddModalOpen(true);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(raf);
+    };
+  }, [isAddModalMounted]);
+
+  useEffect(() => {
+    if (!isAddModalMounted) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function handleKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeAddModal();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isAddModalMounted]);
+
+  useEffect(() => {
+    return () => {
+      if (addModalCloseTimer.current !== null) {
+        window.clearTimeout(addModalCloseTimer.current);
+      }
+    };
+  }, []);
+
+  function openAddModal() {
+    if (addModalCloseTimer.current !== null) {
+      window.clearTimeout(addModalCloseTimer.current);
+      addModalCloseTimer.current = null;
+    }
+
+    setMeasuredDay(toDateInputValue(new Date()));
+    setMeasuredPeriod(getDefaultBloodPressurePeriod());
+    setStatus(null);
+    setIsAddModalMounted(true);
+  }
+
+  function closeAddModal() {
+    setIsAddModalOpen(false);
+
+    if (addModalCloseTimer.current !== null) {
+      window.clearTimeout(addModalCloseTimer.current);
+    }
+
+    addModalCloseTimer.current = window.setTimeout(() => {
+      setIsAddModalMounted(false);
+      addMeasurementButtonRef.current?.focus();
+    }, 180);
+  }
+
   async function reloadReadings() {
     const supabase = createSupabaseBrowserClient();
     if (!supabase) {
@@ -1010,7 +1306,8 @@ export default function HomePage() {
       setSystolic("");
       setDiastolic("");
       setMeasuredDay(toDateInputValue(new Date()));
-      setMeasuredPeriod("morning");
+      setMeasuredPeriod(getDefaultBloodPressurePeriod());
+      closeAddModal();
       await reloadReadings();
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Unable to save reading.");
@@ -1055,70 +1352,16 @@ export default function HomePage() {
             and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to enable saving and history.
           </p>
         ) : null}
-        <form className="form form-inline" onSubmit={handleSubmit}>
-          <label className="field field-compact">
-            <span>SYS</span>
-            <input
-              aria-label="Systolic"
-              inputMode="numeric"
-              name="systolic"
-              type="number"
-              min="1"
-              step="1"
-              value={systolic}
-              onChange={(event) => setSystolic(event.target.value)}
-            />
-          </label>
-
-          <span className="form-separator" aria-hidden="true">
-            /
-          </span>
-
-          <label className="field field-compact">
-            <span>DIA</span>
-            <input
-              aria-label="Diastolic"
-              inputMode="numeric"
-              name="diastolic"
-              type="number"
-              min="1"
-              step="1"
-              value={diastolic}
-              onChange={(event) => setDiastolic(event.target.value)}
-            />
-          </label>
-
-          <label className="field field-wide">
-            <span>Date</span>
-            <input
-              name="measured_day"
-              type="date"
-              value={measuredDay}
-              onChange={(event) => setMeasuredDay(event.target.value)}
-            />
-          </label>
-
-          <div className="chip-stack">
-            <span className="field-label">Time of day</span>
-            <div className="chip-row">
-              {(["morning", "lunch", "evening"] as BloodPressurePeriod[]).map((period) => (
-                <ChipButton
-                  key={period}
-                  active={measuredPeriod === period}
-                  onClick={() => setMeasuredPeriod(period)}
-                >
-                  {getBloodPressurePeriodLabel(period)}
-                </ChipButton>
-              ))}
-            </div>
-          </div>
-
-          <button type="submit" disabled={!canSubmit || isSaving || !supabaseConfigured}>
-            {isSaving ? "Saving..." : "Save"}
-          </button>
-
-          {status ? <p className="status">{status}</p> : null}
-        </form>
+        <p className="panel-lede">Open a full-screen entry flow for a quicker mobile input.</p>
+        <button
+          ref={addMeasurementButtonRef}
+          className="add-measurement-button"
+          type="button"
+          onClick={openAddModal}
+        >
+          Add measurement
+        </button>
+        {!isAddModalMounted && status ? <p className="status">{status}</p> : null}
       </section>
 
       <details className="page-section history-panel" id="history">
@@ -1158,6 +1401,23 @@ export default function HomePage() {
       <div className="app-shell-spacer" aria-hidden="true" />
 
       <AppShellNav activeSection={activeSection} onSelect={setActiveSection} />
+      <BloodPressureEntryModal
+        isMounted={isAddModalMounted}
+        isOpen={isAddModalOpen}
+        supabaseConfigured={supabaseConfigured}
+        isSaving={isSaving}
+        status={status}
+        systolic={systolic}
+        setSystolic={setSystolic}
+        diastolic={diastolic}
+        setDiastolic={setDiastolic}
+        measuredDay={measuredDay}
+        setMeasuredDay={setMeasuredDay}
+        measuredPeriod={measuredPeriod}
+        setMeasuredPeriod={setMeasuredPeriod}
+        onClose={closeAddModal}
+        onSubmit={handleSubmit}
+      />
     </main>
   );
 }

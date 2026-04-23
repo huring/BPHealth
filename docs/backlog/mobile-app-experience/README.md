@@ -51,7 +51,7 @@ This app is meant for frequent, real-world use on a phone, so the experience sho
 2. Card 02: Done
 3. Card 03: Done
 4. Card 04: Done
-5. Card 05: Pending
+5. Card 05: Done
 6. Card 06: Pending
 7. Card 07: Pending
 

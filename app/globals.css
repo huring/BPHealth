@@ -40,6 +40,16 @@ a {
   color: inherit;
 }
 
+button,
+input,
+select,
+summary,
+.chart-range-point,
+.app-nav-link {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 .shell {
   min-height: 100svh;
   width: min(100%, 480px);
@@ -155,6 +165,7 @@ ul {
 
 .field input {
   width: 100%;
+  min-height: 48px;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.04);
@@ -170,6 +181,7 @@ ul {
 
 .field select {
   width: 100%;
+  min-height: 48px;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.04);
@@ -197,6 +209,7 @@ input[type="checkbox"] {
 }
 
 button {
+  min-height: 48px;
   border: 0;
   border-radius: 999px;
   background: var(--ink);
@@ -206,11 +219,26 @@ button {
   font-weight: 700;
   cursor: pointer;
   justify-self: start;
+  transition:
+    transform 120ms ease,
+    opacity 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease,
+    box-shadow 120ms ease;
 }
 
 button:disabled {
   cursor: not-allowed;
   opacity: 0.65;
+}
+
+button:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+button:focus-visible {
+  outline: 2px solid rgba(124, 169, 224, 0.45);
+  outline-offset: 2px;
 }
 
 .status {
@@ -240,6 +268,7 @@ button:disabled {
 }
 
 .chip {
+  min-height: 44px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.05);
@@ -249,12 +278,27 @@ button:disabled {
   font-weight: 700;
   justify-self: auto;
   box-shadow: none;
+  transition:
+    transform 120ms ease,
+    opacity 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
 }
 
 .chip-active {
   background: var(--ink);
   color: #fff;
   border-color: transparent;
+}
+
+.chip:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.chip:focus-visible {
+  outline: 2px solid rgba(124, 169, 224, 0.45);
+  outline-offset: 2px;
 }
 
 .history-panel {
@@ -269,10 +313,12 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-height: 44px;
   padding: 0 0 12px;
   margin: 0 0 12px;
   user-select: none;
   border-bottom: 1px solid var(--line);
+  transition: opacity 120ms ease, transform 120ms ease;
 }
 
 .history-panel > summary::-webkit-details-marker {
@@ -326,11 +372,16 @@ button:disabled {
 }
 
 .history-delete {
+  min-width: 88px;
   background: transparent;
   color: #ef9d82;
   border: 1px solid rgba(239, 157, 130, 0.25);
   padding: 10px 14px;
   font-weight: 700;
+}
+
+.history-delete:active {
+  transform: translateY(1px) scale(0.99);
 }
 
 .chart {
@@ -507,7 +558,7 @@ button:disabled {
 
 .chart-range-point {
   stroke: #0f1620;
-  stroke-width: 2;
+  stroke-width: 3;
   cursor: pointer;
   transition:
     transform 140ms ease,
@@ -559,6 +610,10 @@ button:disabled {
 .chart-range-point:focus-visible {
   transform: scale(1.15);
   outline: none;
+}
+
+.chart-selection:active {
+  transform: translateY(1px);
 }
 
 .chart-footnote {
@@ -655,6 +710,7 @@ button:disabled {
 .app-nav-link {
   justify-self: stretch;
   min-width: 0;
+  min-height: 44px;
   padding: 12px 10px;
   border-radius: 12px;
   border: 0;
@@ -664,11 +720,20 @@ button:disabled {
   font-weight: 700;
   letter-spacing: 0.01em;
   text-align: center;
+  transition:
+    transform 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease,
+    opacity 120ms ease;
 }
 
 .app-nav-link-active {
   background: rgba(142, 178, 232, 0.16);
   color: var(--ink);
+}
+
+.app-nav-link:active {
+  transform: translateY(1px) scale(0.98);
 }
 
 .daily-form {

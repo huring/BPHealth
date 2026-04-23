@@ -20,4 +20,5 @@ Define better touch behavior across the app.
 
 ## Notes
 
-- Prefer simple feedback over heavy motion
+- Keep tap feedback light and immediate
+- Prefer minimum 44px touch targets for primary controls

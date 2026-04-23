@@ -45,6 +45,16 @@ This app is meant for frequent, real-world use on a phone, so the experience sho
 6. [card-06-icons-splash-and-branding.md](./card-06-icons-splash-and-branding.md)
 7. [card-07-offline-and-poor-network-behavior.md](./card-07-offline-and-poor-network-behavior.md)
 
+## Card Status
+
+1. Card 01: Done
+2. Card 02: Pending
+3. Card 03: Pending
+4. Card 04: Pending
+5. Card 05: Pending
+6. Card 06: Pending
+7. Card 07: Pending
+
 ## Notes
 
 This is for a personal single-user app, so the goal is a clean and practical phone experience rather than a broad platform strategy.

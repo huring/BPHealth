@@ -38,4 +38,14 @@
 - [x] Card 03: Interactions
 - [x] Card 04: Time Range Controls
 
+## Mobile App Experience Card Status
+
+- [x] Card 01: PWA Foundation
+- [ ] Card 02: Installable App
+- [ ] Card 03: Mobile Viewport and Safe Areas
+- [ ] Card 04: App Shell and Navigation
+- [ ] Card 05: Touch Interactions
+- [ ] Card 06: Icons, Splash, and Branding
+- [ ] Card 07: Offline and Poor Network Behavior
+
 Update this list when a card is implemented and committed.

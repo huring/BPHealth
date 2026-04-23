@@ -1,6 +1,6 @@
 "use client";
 
-import type { FormEvent } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import {
   createSupabaseBrowserClient,
@@ -38,6 +38,12 @@ function toDateInputValue(date: Date) {
   const offsetMs = date.getTimezoneOffset() * 60_000;
   const localTime = new Date(date.getTime() - offsetMs);
   return localTime.toISOString().slice(0, 10);
+}
+
+function shiftDateInputValue(dateValue: string, days: number) {
+  const date = new Date(`${dateValue}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  return toDateInputValue(date);
 }
 
 function formatReadingTime(measuredAt: string) {
@@ -100,6 +106,27 @@ function pointsToPath(points: ChartPoint[]) {
 
 function formatChartTickValue(value: number) {
   return Math.round(value).toString();
+}
+
+function ChipButton({
+  active,
+  children,
+  onClick,
+}: {
+  active?: boolean;
+  children: ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className={`chip${active ? " chip-active" : ""}`}
+      type="button"
+      aria-pressed={Boolean(active)}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
 }
 
 function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) {
@@ -196,6 +223,8 @@ function DailyFactorsPanel({ supabaseConfigured }: { supabaseConfigured: boolean
   const [dailyStatus, setDailyStatus] = useState<string | null>(null);
   const [isLoadingDailyFactors, setIsLoadingDailyFactors] = useState(false);
   const [isSavingDailyFactors, setIsSavingDailyFactors] = useState(false);
+  const todayValue = toDateInputValue(new Date());
+  const yesterdayValue = shiftDateInputValue(todayValue, -1);
 
   useEffect(() => {
     let isActive = true;
@@ -320,38 +349,50 @@ function DailyFactorsPanel({ supabaseConfigured }: { supabaseConfigured: boolean
           />
         </label>
 
-        <label className="daily-toggle">
-          <input
-            checked={sleptOrNapped}
-            name="slept_or_napped"
-            type="checkbox"
-            onChange={(event) => setSleptOrNapped(event.target.checked)}
-          />
-          <span>Slept or napped</span>
-        </label>
+        <div className="chip-stack">
+          <span className="field-label">Quick day</span>
+          <div className="chip-row">
+            <ChipButton active={day === todayValue} onClick={() => setDay(todayValue)}>
+              Today
+            </ChipButton>
+            <ChipButton active={day === yesterdayValue} onClick={() => setDay(yesterdayValue)}>
+              Yesterday
+            </ChipButton>
+          </div>
+        </div>
 
-        <label className="daily-toggle">
-          <input
-            checked={hadAlcohol}
-            name="had_alcohol"
-            type="checkbox"
-            onChange={(event) => setHadAlcohol(event.target.checked)}
-          />
-          <span>Alcohol that day</span>
-        </label>
+        <div className="chip-stack">
+          <span className="field-label">Sleep</span>
+          <div className="chip-row">
+            <ChipButton active={sleptOrNapped} onClick={() => setSleptOrNapped((current) => !current)}>
+              Slept / nap
+            </ChipButton>
+          </div>
+        </div>
 
-        <label className="field daily-feeling">
-          <span>Feeling</span>
-          <select
-            name="feeling"
-            value={feeling}
-            onChange={(event) => setFeeling(event.target.value as DailyFeeling)}
-          >
-            <option value="good_productive">Good / productive</option>
-            <option value="neutral">Neutral</option>
-            <option value="bad">Bad</option>
-          </select>
-        </label>
+        <div className="chip-stack">
+          <span className="field-label">Alcohol</span>
+          <div className="chip-row">
+            <ChipButton active={hadAlcohol} onClick={() => setHadAlcohol((current) => !current)}>
+              Had alcohol
+            </ChipButton>
+          </div>
+        </div>
+
+        <div className="chip-stack">
+          <span className="field-label">Feeling</span>
+          <div className="chip-row">
+            <ChipButton active={feeling === "good_productive"} onClick={() => setFeeling("good_productive")}>
+              Good
+            </ChipButton>
+            <ChipButton active={feeling === "neutral"} onClick={() => setFeeling("neutral")}>
+              Neutral
+            </ChipButton>
+            <ChipButton active={feeling === "bad"} onClick={() => setFeeling("bad")}>
+              Bad
+            </ChipButton>
+          </div>
+        </div>
 
         <button type="submit" disabled={isSavingDailyFactors || !supabaseConfigured}>
           {isSavingDailyFactors ? "Saving..." : isLoadingDailyFactors ? "Loading..." : "Save day"}
@@ -582,12 +623,31 @@ export default function HomePage() {
             />
           </label>
 
+          <div className="chip-stack">
+            <span className="field-label">Quick time</span>
+            <div className="chip-row">
+              <ChipButton onClick={() => setMeasuredAt(toDateTimeLocalValue(new Date()))}>
+                Now
+              </ChipButton>
+              <ChipButton
+                onClick={() => setMeasuredAt(toDateTimeLocalValue(new Date(Date.now() - 15 * 60 * 1000)))}
+              >
+                -15m
+              </ChipButton>
+              <ChipButton
+                onClick={() => setMeasuredAt(toDateTimeLocalValue(new Date(Date.now() - 30 * 60 * 1000)))}
+              >
+                -30m
+              </ChipButton>
+            </div>
+          </div>
+
           <button type="submit" disabled={!canSubmit || isSaving || !supabaseConfigured}>
             {isSaving ? "Saving..." : "Save"}
           </button>
 
-        {status ? <p className="status">{status}</p> : null}
-      </form>
+          {status ? <p className="status">{status}</p> : null}
+        </form>
       </section>
 
       <details className="panel history-panel" id="history">

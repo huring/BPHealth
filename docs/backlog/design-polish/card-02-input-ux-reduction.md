@@ -1,5 +1,7 @@
 # Card 02: Input UX Reduction
 
+Status: done
+
 ## Objective
 
 Reduce reliance on traditional forms.
@@ -18,5 +20,5 @@ Reduce reliance on traditional forms.
 
 ## Notes
 
+- Implemented in [`app/page.tsx`](../../../app/page.tsx) and [`app/globals.css`](../../../app/globals.css)
 - Keep the changes practical and targeted to high-friction spots
-

@@ -220,6 +220,41 @@ button:disabled {
   grid-column: 1 / -1;
 }
 
+.chip-stack {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 8px;
+}
+
+.field-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--ink);
+  padding: 11px 14px;
+  font: inherit;
+  font-weight: 700;
+  justify-self: auto;
+  box-shadow: none;
+}
+
+.chip-active {
+  background: var(--ink);
+  color: #fff;
+  border-color: transparent;
+}
+
 .history-panel {
   padding-top: 0;
   scroll-margin-top: 12px;
@@ -380,7 +415,7 @@ button:disabled {
 }
 
 .daily-form {
-  grid-template-columns: minmax(120px, 1fr) minmax(150px, 1fr);
+  grid-template-columns: 1fr;
 }
 
 .daily-date {
@@ -415,6 +450,11 @@ button:disabled {
 }
 
 @media (max-width: 640px) {
+  .shell {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
   .form-inline {
     grid-template-columns: minmax(72px, 92px) auto minmax(72px, 92px) minmax(180px, 1fr) auto;
   }

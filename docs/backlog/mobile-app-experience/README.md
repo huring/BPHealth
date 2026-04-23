@@ -49,7 +49,7 @@ This app is meant for frequent, real-world use on a phone, so the experience sho
 
 1. Card 01: Done
 2. Card 02: Done
-3. Card 03: Pending
+3. Card 03: Done
 4. Card 04: Pending
 5. Card 05: Pending
 6. Card 06: Pending

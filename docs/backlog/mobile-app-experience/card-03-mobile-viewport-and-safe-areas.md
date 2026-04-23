@@ -17,6 +17,10 @@ Make the UI behave correctly on phone screens.
 - No broken spacing near screen edges
 - Mobile screen behavior feels intentional
 
+## Status
+
+- Done
+
 ## Notes
 
 - Prioritize real phone ergonomics over desktop assumptions

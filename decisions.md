@@ -43,7 +43,7 @@
 - [x] Card 01: PWA Foundation
 - [x] Card 02: Installable App
 - [x] Card 03: Mobile Viewport and Safe Areas
-- [ ] Card 04: App Shell and Navigation
+- [x] Card 04: App Shell and Navigation
 - [ ] Card 05: Touch Interactions
 - [ ] Card 06: Icons, Splash, and Branding
 - [ ] Card 07: Offline and Poor Network Behavior

@@ -255,6 +255,60 @@ function ChipButton({
   );
 }
 
+type ShellSection = "latest" | "chart" | "add" | "history" | "daily";
+
+function getShellSectionLabel(section: ShellSection) {
+  if (section === "latest") {
+    return "Latest";
+  }
+
+  if (section === "chart") {
+    return "Chart";
+  }
+
+  if (section === "add") {
+    return "Add";
+  }
+
+  if (section === "history") {
+    return "History";
+  }
+
+  return "Daily";
+}
+
+function AppShellNav({
+  activeSection,
+  onSelect,
+}: {
+  activeSection: ShellSection;
+  onSelect: (section: ShellSection) => void;
+}) {
+  const sections: ShellSection[] = ["latest", "chart", "add", "history", "daily"];
+
+  function scrollToSection(section: ShellSection) {
+    onSelect(section);
+    const element = document.getElementById(section);
+    element?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  return (
+    <nav className="app-nav" aria-label="Primary">
+      {sections.map((section) => (
+        <button
+          key={section}
+          className={`app-nav-link${activeSection === section ? " app-nav-link-active" : ""}`}
+          type="button"
+          aria-pressed={activeSection === section}
+          onClick={() => scrollToSection(section)}
+        >
+          {getShellSectionLabel(section)}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
 function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) {
   const chronological = getChronologicalReadings(readings);
   const [timeRange, setTimeRange] = useState<BloodPressureRange>("all");
@@ -577,7 +631,7 @@ function DailyFactorsPanel({ supabaseConfigured }: { supabaseConfigured: boolean
   }
 
   return (
-    <section className="page-section" id="daily-factors">
+    <section className="page-section" id="daily">
       <h2>Daily factors</h2>
       <p className="panel-lede">
         Keep daily input fast. One row per day is enough for this pass.
@@ -664,6 +718,7 @@ export default function HomePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [readings, setReadings] = useState<BloodPressureReading[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeSection, setActiveSection] = useState<ShellSection>("latest");
   const chronologicalReadings = getChronologicalReadings(readings);
   const latestReading = chronologicalReadings[chronologicalReadings.length - 1] ?? null;
   const averageReading = getAverageReading(chronologicalReadings);
@@ -716,6 +771,37 @@ export default function HomePage() {
       isActive = false;
     };
   }, [supabaseConfigured]);
+
+  useEffect(() => {
+    const sectionIds: ShellSection[] = ["latest", "chart", "add", "history", "daily"];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visibleEntry = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((left, right) => right.intersectionRatio - left.intersectionRatio)[0];
+
+        if (visibleEntry?.target instanceof HTMLElement) {
+          setActiveSection(visibleEntry.target.id as ShellSection);
+        }
+      },
+      {
+        root: null,
+        threshold: [0.25, 0.5, 0.75],
+        rootMargin: "-10% 0px -55% 0px",
+      },
+    );
+
+    sectionIds.forEach((sectionId) => {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        observer.observe(element);
+      }
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   async function reloadReadings() {
     const supabase = createSupabaseBrowserClient();
@@ -808,7 +894,7 @@ export default function HomePage() {
   return (
     <main className="shell app-shell">
       <InstallPrompt />
-      <header className="page-hero">
+      <header className="page-hero" id="latest">
         <p className="eyebrow">Latest reading</p>
         {latestReading ? (
           <>
@@ -828,7 +914,7 @@ export default function HomePage() {
         {isLoading ? <p className="status">Loading chart...</p> : <BloodPressureChart readings={readings} />}
       </section>
 
-      <section className="page-section">
+      <section className="page-section" id="add">
         <h2>Add reading</h2>
         {!supabaseConfigured ? (
           <p className="status">
@@ -935,6 +1021,10 @@ export default function HomePage() {
       </details>
 
       <DailyFactorsPanel supabaseConfigured={supabaseConfigured} />
+
+      <div className="app-shell-spacer" aria-hidden="true" />
+
+      <AppShellNav activeSection={activeSection} onSelect={setActiveSection} />
     </main>
   );
 }

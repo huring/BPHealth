@@ -7,7 +7,7 @@ Define an app-like shell and navigation model.
 ## Scope
 
 - Mobile header behavior
-- Bottom navigation if appropriate
+- Bottom navigation as a simple fixed dock
 - Persistent structure for key views
 - Reduce "website" feel
 
@@ -20,3 +20,4 @@ Define an app-like shell and navigation model.
 ## Notes
 
 - Keep navigation minimal and focused on the core workflow
+- The shell can stay one-page; the nav only needs to jump between primary sections

@@ -5,9 +5,21 @@ import { ServiceWorkerRegister } from "./service-worker-register";
 
 export const metadata: Metadata = {
   title: "BPHealth",
-  description: "A simple personal blood pressure tracker.",
+  description: "A simple personal blood pressure tracker for mobile use.",
   manifest: "/manifest.webmanifest",
   applicationName: "BPHealth",
+  icons: [
+    {
+      rel: "icon",
+      url: "/icon.svg",
+      type: "image/svg+xml",
+    },
+    {
+      rel: "apple-touch-icon",
+      url: "/icon-maskable.svg",
+      type: "image/svg+xml",
+    },
+  ],
   appleWebApp: {
     capable: true,
     title: "BPHealth",

@@ -19,3 +19,4 @@ Define the assets and presentation needed for an installed-app feel.
 ## Notes
 
 - Keep branding simple and consistent with the dark UI direction
+- A lightweight branded loading screen is enough for v1

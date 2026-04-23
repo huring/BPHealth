@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "BPHealth",
     short_name: "BPHealth",
-    description: "A simple personal blood pressure tracker.",
+    description: "A simple personal blood pressure tracker for mobile use.",
     start_url: "/",
     scope: "/",
     display: "standalone",
@@ -18,6 +18,12 @@ export default function manifest(): MetadataRoute.Manifest {
         sizes: "any",
         type: "image/svg+xml",
         purpose: "any",
+      },
+      {
+        src: "/icon-maskable.svg",
+        sizes: "any",
+        type: "image/svg+xml",
+        purpose: "maskable",
       },
     ],
   };

@@ -45,7 +45,7 @@
 - [x] Card 03: Mobile Viewport and Safe Areas
 - [x] Card 04: App Shell and Navigation
 - [x] Card 05: Touch Interactions
-- [ ] Card 06: Icons, Splash, and Branding
+- [x] Card 06: Icons, Splash, and Branding
 - [ ] Card 07: Offline and Poor Network Behavior
 
 Update this list when a card is implemented and committed.

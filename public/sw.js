@@ -1,5 +1,5 @@
 const CACHE_NAME = "bphealth-shell-v1";
-const SHELL_ASSETS = ["/", "/manifest.webmanifest", "/icon.svg"];
+const SHELL_ASSETS = ["/", "/manifest.webmanifest", "/icon.svg", "/icon-maskable.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

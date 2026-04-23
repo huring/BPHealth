@@ -55,6 +55,8 @@ type AverageReading = {
 
 type BloodPressureRange = "1d" | "1w" | "1m" | "1y" | "all";
 
+const AUTOMATIC_MEASUREMENT_TAG_NAMES = ["morning", "lunch", "evening"] as const;
+
 function toDateInputValue(date: Date) {
   const offsetMs = date.getTimezoneOffset() * 60_000;
   const localTime = new Date(date.getTime() - offsetMs);
@@ -125,20 +127,6 @@ function getBloodPressureMeasuredAt(day: string, period: BloodPressurePeriod) {
   return new Date(`${day}T${getBloodPressurePeriodTime(period)}`).toISOString();
 }
 
-function getBloodPressurePeriodFromTimestamp(measuredAt: string) {
-  const hour = new Date(measuredAt).getHours();
-
-  if (hour >= 5 && hour < 11) {
-    return "morning";
-  }
-
-  if (hour >= 11 && hour < 17) {
-    return "lunch";
-  }
-
-  return "evening";
-}
-
 function formatReadingLabel(reading: BloodPressureReading) {
   return `${reading.systolic}/${reading.diastolic}`;
 }
@@ -161,6 +149,14 @@ function normalizeMeasurementTagName(name: string) {
 
 function formatMeasurementDayLabel(day: string) {
   return formatPrettyDate(new Date(`${day}T00:00:00`), true, false);
+}
+
+function getAutomaticMeasurementTagName(period: BloodPressurePeriod) {
+  return getBloodPressurePeriodLabel(period).toLowerCase();
+}
+
+function isAutomaticMeasurementTagName(name: string) {
+  return AUTOMATIC_MEASUREMENT_TAG_NAMES.includes(normalizeMeasurementTagName(name).toLowerCase() as (typeof AUTOMATIC_MEASUREMENT_TAG_NAMES)[number]);
 }
 
 function getLocalDayStart(date: Date) {
@@ -367,8 +363,6 @@ function BloodPressureEntryModal({
   setDiastolic,
   measuredDay,
   setMeasuredDay,
-  measuredPeriod,
-  setMeasuredPeriod,
   measurementTags,
   selectedTagIds,
   tagDraft,
@@ -396,8 +390,6 @@ function BloodPressureEntryModal({
   setDiastolic: (value: string) => void;
   measuredDay: string;
   setMeasuredDay: (value: string) => void;
-  measuredPeriod: BloodPressurePeriod;
-  setMeasuredPeriod: (value: BloodPressurePeriod) => void;
   measurementTags: MeasurementTagRow[];
   selectedTagIds: string[];
   tagDraft: string;
@@ -419,7 +411,8 @@ function BloodPressureEntryModal({
   const dateInputRef = useRef<HTMLInputElement>(null);
   const dateButtonRef = useRef<HTMLButtonElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
-  const selectedTags = measurementTags.filter((tag) => selectedTagIds.includes(tag.id));
+  const manualMeasurementTags = measurementTags.filter((tag) => !isAutomaticMeasurementTagName(tag.name));
+  const selectedTags = manualMeasurementTags.filter((tag) => selectedTagIds.includes(tag.id));
 
   useEffect(() => {
     if (!isOpen) {
@@ -438,8 +431,6 @@ function BloodPressureEntryModal({
   if (!isMounted) {
     return null;
   }
-
-  const periods: BloodPressurePeriod[] = ["morning", "lunch", "evening"];
 
   return (
     <div
@@ -524,7 +515,7 @@ function BloodPressureEntryModal({
                   step="1"
                   value={diastolic}
                   onChange={(event) => setDiastolic(event.target.value)}
-                    onKeyDown={(event) => {
+                  onKeyDown={(event) => {
                     if (event.key === "Enter") {
                       event.preventDefault();
                       dateButtonRef.current?.focus();
@@ -580,23 +571,6 @@ function BloodPressureEntryModal({
                   tabIndex={-1}
                   aria-hidden="true"
                 />
-              </div>
-            </div>
-
-            <div className="segmented-stack">
-              <span className="field-label">Time of day</span>
-              <div className="segmented" role="radiogroup" aria-label="Time of day">
-                {periods.map((period) => (
-                  <button
-                    key={period}
-                    aria-pressed={measuredPeriod === period}
-                    className={`segmented-option${measuredPeriod === period ? " segmented-option-active" : ""}`}
-                    type="button"
-                    onClick={() => setMeasuredPeriod(period)}
-                  >
-                    {getBloodPressurePeriodLabel(period)}
-                  </button>
-                ))}
               </div>
             </div>
 
@@ -656,10 +630,10 @@ function BloodPressureEntryModal({
               <div className="tag-group">
                 <span className="tag-section-label">All tags</span>
                 <div className="chip-row tag-chip-cloud">
-                  {measurementTags.length === 0 ? (
+                  {manualMeasurementTags.length === 0 ? (
                     <p className="status tag-empty">No tags yet. Add one to get started.</p>
                   ) : (
-                    measurementTags.map((tag) => (
+                    manualMeasurementTags.map((tag) => (
                       <ChipButton
                         key={tag.id}
                         active={selectedTagIds.includes(tag.id)}
@@ -985,9 +959,6 @@ export default function HomePage() {
   const [systolic, setSystolic] = useState("");
   const [diastolic, setDiastolic] = useState("");
   const [measuredDay, setMeasuredDay] = useState(() => toDateInputValue(new Date()));
-  const [measuredPeriod, setMeasuredPeriod] = useState<BloodPressurePeriod>(() =>
-    getDefaultBloodPressurePeriod(),
-  );
   const [dailySleptOrNapped, setDailySleptOrNapped] = useState(false);
   const [dailyHadAlcohol, setDailyHadAlcohol] = useState(false);
   const [dailyFeeling, setDailyFeeling] = useState<DailyFeeling>("neutral");
@@ -1218,7 +1189,6 @@ export default function HomePage() {
     }
 
     setMeasuredDay(toDateInputValue(new Date()));
-    setMeasuredPeriod(getDefaultBloodPressurePeriod());
     setDailySleptOrNapped(false);
     setDailyHadAlcohol(false);
     setDailyFeeling("neutral");
@@ -1338,6 +1308,46 @@ export default function HomePage() {
     }
   }
 
+  async function resolveMeasurementTagId(
+    supabase: NonNullable<ReturnType<typeof createSupabaseBrowserClient>>,
+    tagName: string,
+  ) {
+    const normalizedName = normalizeMeasurementTagName(tagName);
+    const localMatch = measurementTags.find(
+      (tag) => normalizeMeasurementTagName(tag.name).toLowerCase() === normalizedName.toLowerCase(),
+    );
+
+    if (localMatch) {
+      return localMatch.id;
+    }
+
+    const { data, error } = await supabase
+      .from("measurement_tags")
+      .select("id, name, created_at")
+      .ilike("name", normalizedName)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    if (data) {
+      return (data as MeasurementTagRow).id;
+    }
+
+    const { data: insertedTag, error: insertError } = await supabase
+      .from("measurement_tags")
+      .insert({ name: normalizedName })
+      .select("id, name, created_at")
+      .single();
+
+    if (insertError) {
+      throw insertError;
+    }
+
+    return (insertedTag as MeasurementTagRow).id;
+  }
+
   function handleToggleMeasurementTag(tagId: string) {
     setSelectedTagIds((current) =>
       current.includes(tagId) ? current.filter((currentTagId) => currentTagId !== tagId) : [...current, tagId],
@@ -1394,6 +1404,11 @@ export default function HomePage() {
       if (!supabase) {
         throw new Error("Supabase is not configured yet.");
       }
+      const measuredPeriod = getDefaultBloodPressurePeriod();
+      const automaticTagId = await resolveMeasurementTagId(
+        supabase,
+        getAutomaticMeasurementTagName(measuredPeriod),
+      );
       const { data, error } = await supabase
         .from("blood_pressure_readings")
         .insert({
@@ -1408,8 +1423,9 @@ export default function HomePage() {
         throw error;
       }
 
-      if (data && selectedTagIds.length > 0) {
-        const assignmentRows = selectedTagIds.map((tagId) => ({
+      if (data) {
+        const tagIds = Array.from(new Set([...selectedTagIds, automaticTagId]));
+        const assignmentRows = tagIds.map((tagId) => ({
           measurement_id: data.id,
           tag_id: tagId,
         }));
@@ -1440,7 +1456,6 @@ export default function HomePage() {
       setSystolic("");
       setDiastolic("");
       setMeasuredDay(toDateInputValue(new Date()));
-      setMeasuredPeriod(getDefaultBloodPressurePeriod());
       setDailySleptOrNapped(false);
       setDailyHadAlcohol(false);
       setDailyFeeling("neutral");
@@ -1557,9 +1572,6 @@ export default function HomePage() {
                       </div>
                     </div>
                     <div className="history-chips">
-                      <span className="history-chip">
-                        {getBloodPressurePeriodLabel(getBloodPressurePeriodFromTimestamp(reading.measured_at)).toLowerCase()}
-                      </span>
                       {readingTags.map((tag) => (
                         <span key={tag.id} className="history-chip">
                           {tag.name}
@@ -1591,8 +1603,6 @@ export default function HomePage() {
         setDiastolic={setDiastolic}
         measuredDay={measuredDay}
         setMeasuredDay={setMeasuredDay}
-        measuredPeriod={measuredPeriod}
-        setMeasuredPeriod={setMeasuredPeriod}
         measurementTags={measurementTags}
         selectedTagIds={selectedTagIds}
         tagDraft={tagDraft}

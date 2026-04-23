@@ -1,5 +1,7 @@
 # Card 05: Automatic Tags
 
+Status: done
+
 ## Objective
 Define system-generated tags.
 

@@ -584,11 +584,17 @@ function BloodPressureChart({
   if (rangeReadings.length === 0) {
     return (
       <div className="chart">
-        <div className="chart-ranges" role="tablist" aria-label="Chart time range">
+        <div className="chart-ranges segmented" role="radiogroup" aria-label="Chart time range">
           {(["1d", "1w", "1m", "1y", "all"] as BloodPressureRange[]).map((range) => (
-            <ChipButton key={range} active={timeRange === range} onClick={() => onTimeRangeChange(range)}>
+            <button
+              key={range}
+              aria-pressed={timeRange === range}
+              className={`segmented-option${timeRange === range ? " segmented-option-active" : ""}`}
+              type="button"
+              onClick={() => onTimeRangeChange(range)}
+            >
               {getRangeLabel(range)}
-            </ChipButton>
+            </button>
           ))}
         </div>
 
@@ -640,11 +646,17 @@ function BloodPressureChart({
 
   return (
     <div className="chart">
-      <div className="chart-ranges" role="tablist" aria-label="Chart time range">
+      <div className="chart-ranges segmented" role="radiogroup" aria-label="Chart time range">
         {(["1d", "1w", "1m", "1y", "all"] as BloodPressureRange[]).map((range) => (
-          <ChipButton key={range} active={timeRange === range} onClick={() => onTimeRangeChange(range)}>
+          <button
+            key={range}
+            aria-pressed={timeRange === range}
+            className={`segmented-option${timeRange === range ? " segmented-option-active" : ""}`}
+            type="button"
+            onClick={() => onTimeRangeChange(range)}
+          >
             {getRangeLabel(range)}
-          </ChipButton>
+          </button>
         ))}
       </div>
 

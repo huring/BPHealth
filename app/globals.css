@@ -862,6 +862,10 @@ button:focus-visible {
   background: rgba(255, 255, 255, 0.04);
 }
 
+.chart-ranges.segmented {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .segmented-option {
   width: 100%;
   justify-self: stretch;
@@ -873,6 +877,12 @@ button:focus-visible {
   color: var(--muted);
   font-weight: 700;
   box-shadow: none;
+}
+
+.chart-ranges.segmented .segmented-option {
+  min-height: 38px;
+  padding: 9px 6px;
+  font-size: 0.76rem;
 }
 
 .segmented-option-active {

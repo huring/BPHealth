@@ -58,6 +58,7 @@ summary,
   gap: 14px;
   align-items: stretch;
   justify-items: stretch;
+  min-width: 0;
   padding:
     calc(12px + env(safe-area-inset-top))
     12px
@@ -387,16 +388,18 @@ button:focus-visible {
 .chart {
   display: grid;
   gap: 12px;
+  min-width: 0;
 }
 
 .chart-stage {
   position: relative;
-  overflow: visible;
+  overflow: clip;
   border: 0;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
   padding: 0;
+  min-width: 0;
 }
 
 .chart-meta {
@@ -404,6 +407,8 @@ button:focus-visible {
   justify-content: space-between;
   gap: 12px;
   align-items: flex-start;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .chart-legend {
@@ -475,6 +480,7 @@ button:focus-visible {
     border-color 140ms ease,
     background-color 140ms ease,
     box-shadow 140ms ease;
+  max-width: 100%;
 }
 
 .chart-selection:hover,
@@ -513,7 +519,9 @@ button:focus-visible {
 .chart-svg {
   width: 100%;
   height: auto;
-  overflow: visible;
+  overflow: clip;
+  display: block;
+  min-width: 0;
 }
 
 .chart-grid {
@@ -683,6 +691,7 @@ button:focus-visible {
   gap: 10px;
   padding: 0;
   scroll-margin-top: calc(72px + env(safe-area-inset-top));
+  min-width: 0;
 }
 
 .app-shell-spacer {

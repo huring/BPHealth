@@ -46,6 +46,6 @@
 - [x] Card 04: App Shell and Navigation
 - [x] Card 05: Touch Interactions
 - [x] Card 06: Icons, Splash, and Branding
-- [ ] Card 07: Offline and Poor Network Behavior
+- [x] Card 07: Offline and Poor Network Behavior
 
 Update this list when a card is implemented and committed.

@@ -19,4 +19,6 @@ Define graceful behavior when network is weak or unavailable.
 
 ## Notes
 
+- Cache the last known readings and daily factors locally for read-only fallback
+- Block writes when offline and explain why
 - Focus on resilience, not full offline complexity

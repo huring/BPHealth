@@ -53,7 +53,7 @@ This app is meant for frequent, real-world use on a phone, so the experience sho
 4. Card 04: Done
 5. Card 05: Done
 6. Card 06: Done
-7. Card 07: Pending
+7. Card 07: Done
 
 ## Notes
 

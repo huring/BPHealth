@@ -43,6 +43,9 @@ type AverageReading = {
 
 type BloodPressureRange = "1d" | "1w" | "1m" | "1y" | "all";
 
+const BLOOD_PRESSURE_CACHE_KEY = "bphealth.blood-pressure-readings.v1";
+const DAILY_FACTORS_CACHE_PREFIX = "bphealth.daily-factors.v1.";
+
 function toDateInputValue(date: Date) {
   const offsetMs = date.getTimezoneOffset() * 60_000;
   const localTime = new Date(date.getTime() - offsetMs);
@@ -168,6 +171,31 @@ function getAverageReading(readings: BloodPressureReading[]) {
     systolic: Math.round(totalSystolic / readings.length),
     diastolic: Math.round(totalDiastolic / readings.length),
   } satisfies AverageReading;
+}
+
+function readCachedJson<T>(key: string): T | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const rawValue = window.localStorage.getItem(key);
+  if (!rawValue) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(rawValue) as T;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedJson(key: string, value: unknown) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(key, JSON.stringify(value));
 }
 
 function getChartAxisTickIndexes(length: number, maxTicks = 5) {
@@ -527,8 +555,29 @@ function DailyFactorsPanel({ supabaseConfigured }: { supabaseConfigured: boolean
   const [dailyStatus, setDailyStatus] = useState<string | null>(null);
   const [isLoadingDailyFactors, setIsLoadingDailyFactors] = useState(false);
   const [isSavingDailyFactors, setIsSavingDailyFactors] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   const todayValue = toDateInputValue(new Date());
   const yesterdayValue = shiftDateInputValue(todayValue, -1);
+
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+
+    function handleOnline() {
+      setIsOnline(true);
+    }
+
+    function handleOffline() {
+      setIsOnline(false);
+    }
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     let isActive = true;
@@ -540,6 +589,15 @@ function DailyFactorsPanel({ supabaseConfigured }: { supabaseConfigured: boolean
 
       setIsLoadingDailyFactors(true);
       setDailyStatus(null);
+
+      const cacheKey = `${DAILY_FACTORS_CACHE_PREFIX}${day}`;
+      const cachedRow = readCachedJson<DailyFactorRow>(cacheKey);
+      if (cachedRow) {
+        setSleptOrNapped(cachedRow.slept_or_napped);
+        setHadAlcohol(cachedRow.had_alcohol);
+        setFeeling(cachedRow.feeling);
+        setDailyStatus(`Showing cached daily factors for ${formatDateLabel(day)}.`);
+      }
 
       try {
         const supabase = createSupabaseBrowserClient();
@@ -566,6 +624,7 @@ function DailyFactorsPanel({ supabaseConfigured }: { supabaseConfigured: boolean
           setSleptOrNapped(row.slept_or_napped);
           setHadAlcohol(row.had_alcohol);
           setFeeling(row.feeling);
+          writeCachedJson(cacheKey, row);
           setDailyStatus(`Loaded saved factors for ${formatDateLabel(day)}.`);
         } else {
           setSleptOrNapped(false);
@@ -599,6 +658,11 @@ function DailyFactorsPanel({ supabaseConfigured }: { supabaseConfigured: boolean
       return;
     }
 
+    if (!isOnline) {
+      setDailyStatus("You're offline. Daily factors can be viewed from cache, but saving needs a connection.");
+      return;
+    }
+
     setIsSavingDailyFactors(true);
     setDailyStatus(null);
 
@@ -622,6 +686,12 @@ function DailyFactorsPanel({ supabaseConfigured }: { supabaseConfigured: boolean
         throw error;
       }
 
+      writeCachedJson(`${DAILY_FACTORS_CACHE_PREFIX}${day}`, {
+        day,
+        slept_or_napped: sleptOrNapped,
+        had_alcohol: hadAlcohol,
+        feeling,
+      } satisfies DailyFactorRow);
       setDailyStatus(`Saved daily factors for ${formatDateLabel(day)}.`);
     } catch (error) {
       setDailyStatus(error instanceof Error ? error.message : "Unable to save daily factors.");
@@ -640,6 +710,11 @@ function DailyFactorsPanel({ supabaseConfigured }: { supabaseConfigured: boolean
         <p className="status">
           Supabase environment variables are missing. Add `NEXT_PUBLIC_SUPABASE_URL` and
           `NEXT_PUBLIC_SUPABASE_ANON_KEY` to enable saving daily factors.
+        </p>
+      ) : null}
+      {!isOnline ? (
+        <p className="status">
+          You&apos;re offline. Cached daily factors are available, but saving needs a connection.
         </p>
       ) : null}
       <form className="form daily-form" onSubmit={handleDailySubmit}>
@@ -719,6 +794,7 @@ export default function HomePage() {
   const [readings, setReadings] = useState<BloodPressureReading[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeSection, setActiveSection] = useState<ShellSection>("latest");
+  const [isOnline, setIsOnline] = useState(true);
   const chronologicalReadings = getChronologicalReadings(readings);
   const latestReading = chronologicalReadings[chronologicalReadings.length - 1] ?? null;
   const averageReading = getAverageReading(chronologicalReadings);
@@ -753,6 +829,7 @@ export default function HomePage() {
 
         if (isActive) {
           setReadings((data ?? []) as BloodPressureReading[]);
+          writeCachedJson(BLOOD_PRESSURE_CACHE_KEY, data ?? []);
         }
       } catch (error) {
         if (isActive) {
@@ -771,6 +848,37 @@ export default function HomePage() {
       isActive = false;
     };
   }, [supabaseConfigured]);
+
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+
+    function handleOnline() {
+      setIsOnline(true);
+      setStatus((current) => current ?? "Back online.");
+    }
+
+    function handleOffline() {
+      setIsOnline(false);
+      setStatus("You're offline. Showing cached data.");
+    }
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    const cachedReadings = readCachedJson<BloodPressureReading[]>(BLOOD_PRESSURE_CACHE_KEY);
+    if (cachedReadings && cachedReadings.length > 0) {
+      setReadings(cachedReadings);
+      setIsLoading(false);
+      setStatus("Showing cached readings while syncing.");
+    }
+  }, []);
 
   useEffect(() => {
     const sectionIds: ShellSection[] = ["latest", "chart", "add", "history", "daily"];
@@ -818,11 +926,17 @@ export default function HomePage() {
     }
 
     setReadings((data ?? []) as BloodPressureReading[]);
+    writeCachedJson(BLOOD_PRESSURE_CACHE_KEY, data ?? []);
   }
 
   async function handleDelete(reading: BloodPressureReading) {
     if (!supabaseConfigured) {
       setStatus("Supabase is not configured yet. Add the env vars to delete readings.");
+      return;
+    }
+
+    if (!isOnline) {
+      setStatus("You're offline. Delete actions need a connection.");
       return;
     }
 
@@ -860,6 +974,11 @@ export default function HomePage() {
       return;
     }
 
+    if (!isOnline) {
+      setStatus("You're offline. Reading saves need a connection.");
+      return;
+    }
+
     setIsSaving(true);
     setStatus(null);
 
@@ -878,6 +997,15 @@ export default function HomePage() {
         throw error;
       }
 
+      writeCachedJson(BLOOD_PRESSURE_CACHE_KEY, [
+        {
+          id: crypto.randomUUID(),
+          systolic: Number(systolic),
+          diastolic: Number(diastolic),
+          measured_at: getBloodPressureMeasuredAt(measuredDay, measuredPeriod),
+        },
+        ...chronologicalReadings,
+      ]);
       setStatus("Reading saved.");
       setSystolic("");
       setDiastolic("");
@@ -894,6 +1022,11 @@ export default function HomePage() {
   return (
     <main className="shell app-shell">
       <InstallPrompt />
+      {!isOnline ? (
+        <p className="install-banner" role="status">
+          Offline mode: cached data is available, but saving needs a connection.
+        </p>
+      ) : null}
       <header className="page-hero" id="latest">
         <p className="eyebrow">Latest reading</p>
         {latestReading ? (

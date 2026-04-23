@@ -39,5 +39,5 @@ Create a more premium, mobile-first blood pressure chart that is easier to read 
 
 1. Card 01: Done
 2. Card 02: Done
-3. Card 03: Pending
+3. Card 03: Done
 4. Card 04: Pending

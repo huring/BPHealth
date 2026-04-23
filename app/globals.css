@@ -493,6 +493,47 @@ button:disabled {
   color: var(--ink);
 }
 
+.chart-selection {
+  display: grid;
+  gap: 2px;
+  justify-items: end;
+  text-align: right;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  min-width: 132px;
+  color: var(--muted);
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.chart-selection:hover,
+.chart-selection:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(138, 92, 246, 0.4);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+}
+
+.chart-selection span {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.chart-selection strong {
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+.chart-selection small {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
 .chart-svg {
   width: 100%;
   height: auto;
@@ -515,6 +556,10 @@ button:disabled {
   stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
+  transition:
+    opacity 140ms ease,
+    stroke 140ms ease,
+    stroke-width 140ms ease;
 }
 
 .chart-line-systolic {
@@ -529,11 +574,22 @@ button:disabled {
   stroke: rgba(170, 185, 204, 0.38);
   stroke-width: 5;
   stroke-linecap: round;
+  transition:
+    opacity 140ms ease,
+    stroke 140ms ease,
+    stroke-width 140ms ease;
 }
 
 .chart-range-point {
   stroke: #0f1620;
   stroke-width: 2;
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    opacity 140ms ease,
+    stroke-width 140ms ease;
+  transform-box: fill-box;
+  transform-origin: center;
 }
 
 .chart-range-point-systolic {
@@ -555,6 +611,29 @@ button:disabled {
 
 .chart-point-diastolic {
   fill: #60a5fa;
+}
+
+.chart-selected .chart-range {
+  stroke: rgba(138, 92, 246, 0.8);
+  stroke-width: 6;
+}
+
+.chart-selected .chart-range-point-systolic,
+.chart-selected .chart-range-point-diastolic {
+  stroke-width: 3;
+  transform: scale(1.1);
+}
+
+.chart-dimmed .chart-range,
+.chart-dimmed .chart-range-point,
+.chart-dimmed .chart-line {
+  opacity: 0.28;
+}
+
+.chart-range-point:hover,
+.chart-range-point:focus-visible {
+  transform: scale(1.15);
+  outline: none;
 }
 
 .chart-footnote {

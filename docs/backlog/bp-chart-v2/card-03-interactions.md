@@ -17,6 +17,10 @@ Define how the user interacts with the chart.
 - No heavy or slow animations are introduced
 - Selected states improve readability instead of adding clutter
 
+## Status
+
+- Done
+
 ## Notes
 
 - Favor simple, mobile-friendly interaction patterns

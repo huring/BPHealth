@@ -1,6 +1,6 @@
 "use client";
 
-import type { FormEvent, ReactNode } from "react";
+import type { FormEvent, KeyboardEvent, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import {
   createSupabaseBrowserClient,
@@ -204,6 +204,22 @@ function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) 
   const chronological = getChronologicalReadings(readings);
   const averageReading = getAverageReading(chronological);
   const latestReading = chronological[chronological.length - 1] ?? null;
+  const [selectedReadingId, setSelectedReadingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (chronological.length === 0) {
+      setSelectedReadingId(null);
+      return;
+    }
+
+    setSelectedReadingId((current) => {
+      if (current && chronological.some((reading) => reading.id === current)) {
+        return current;
+      }
+
+      return latestReading?.id ?? chronological[chronological.length - 1].id;
+    });
+  }, [chronological, latestReading?.id]);
 
   if (chronological.length === 0) {
     return <p className="status">No chart data yet.</p>;
@@ -236,6 +252,19 @@ function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) 
   );
   const yTicks = [maxValue, (maxValue + minValue) / 2, minValue];
   const axisTickIndexes = getChartAxisTickIndexes(chronological.length);
+  const selectedReading =
+    chronological.find((reading) => reading.id === selectedReadingId) ?? latestReading;
+
+  function handleReadingSelect(readingId: string) {
+    setSelectedReadingId(readingId);
+  }
+
+  function handleReadingKeyDown(event: KeyboardEvent<SVGCircleElement>, readingId: string) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      setSelectedReadingId(readingId);
+    }
+  }
 
   return (
     <div className="chart">
@@ -268,6 +297,19 @@ function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) 
             Diastolic
           </span>
         </div>
+
+        {selectedReading ? (
+          <button
+            className="chart-selection"
+            type="button"
+            onClick={() => handleReadingSelect(selectedReading.id)}
+            aria-label={`Selected reading ${formatReadingLabel(selectedReading)} from ${formatReadingTime(selectedReading.measured_at)}`}
+          >
+            <span>Selected</span>
+            <strong>{formatReadingLabel(selectedReading)}</strong>
+            <small>{formatReadingTime(selectedReading.measured_at)}</small>
+          </button>
+        ) : null}
       </div>
 
       <div className="chart-stage">
@@ -296,12 +338,42 @@ function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) 
             const diastolicPoint = diastolicPoints[index];
             const topY = Math.min(systolicPoint.y, diastolicPoint.y);
             const bottomY = Math.max(systolicPoint.y, diastolicPoint.y);
+            const isSelected = reading.id === selectedReadingId;
 
             return (
-              <g key={`range-${reading.id}`}>
-                <line className="chart-range" x1={systolicPoint.x} x2={diastolicPoint.x} y1={topY} y2={bottomY} />
-                <circle className="chart-range-point chart-range-point-systolic" cx={systolicPoint.x} cy={systolicPoint.y} r="4.5" />
-                <circle className="chart-range-point chart-range-point-diastolic" cx={diastolicPoint.x} cy={diastolicPoint.y} r="4.5" />
+              <g
+                key={`range-${reading.id}`}
+                className={isSelected ? "chart-selected" : "chart-dimmed"}
+              >
+                <line
+                  className="chart-range"
+                  x1={systolicPoint.x}
+                  x2={diastolicPoint.x}
+                  y1={topY}
+                  y2={bottomY}
+                />
+                <circle
+                  className="chart-range-point chart-range-point-systolic"
+                  cx={systolicPoint.x}
+                  cy={systolicPoint.y}
+                  r={isSelected ? "5.6" : "4.5"}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Select systolic ${reading.systolic} on ${formatChartAxisLabel(reading.measured_at)}`}
+                  onClick={() => handleReadingSelect(reading.id)}
+                  onKeyDown={(event) => handleReadingKeyDown(event, reading.id)}
+                />
+                <circle
+                  className="chart-range-point chart-range-point-diastolic"
+                  cx={diastolicPoint.x}
+                  cy={diastolicPoint.y}
+                  r={isSelected ? "5.6" : "4.5"}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Select diastolic ${reading.diastolic} on ${formatChartAxisLabel(reading.measured_at)}`}
+                  onClick={() => handleReadingSelect(reading.id)}
+                  onKeyDown={(event) => handleReadingKeyDown(event, reading.id)}
+                />
               </g>
             );
           })}

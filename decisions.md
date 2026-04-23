@@ -35,7 +35,7 @@
 
 - [x] Card 01: Chart Structure
 - [x] Card 02: Visual Style
-- [ ] Card 03: Interactions
+- [x] Card 03: Interactions
 - [ ] Card 04: Time Range Controls
 
 Update this list when a card is implemented and committed.

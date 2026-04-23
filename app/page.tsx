@@ -113,25 +113,73 @@ function getBloodPressureMeasuredAt(day: string, period: BloodPressurePeriod) {
   return new Date(`${day}T${getBloodPressurePeriodTime(period)}`).toISOString();
 }
 
-function formatReadingTime(measuredAt: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(measuredAt));
+function getBloodPressurePeriodFromTimestamp(measuredAt: string) {
+  const hour = new Date(measuredAt).getHours();
+
+  if (hour >= 5 && hour < 11) {
+    return "morning";
+  }
+
+  if (hour >= 11 && hour < 17) {
+    return "lunch";
+  }
+
+  return "evening";
 }
 
 function formatReadingLabel(reading: BloodPressureReading) {
   return `${reading.systolic}/${reading.diastolic}`;
 }
 
-function formatAverageLabel(reading: AverageReading) {
-  return `${reading.systolic}/${reading.diastolic}`;
+function formatHistoryFeeling(feeling: DailyFeeling) {
+  if (feeling === "good_productive") {
+    return "feeling good";
+  }
+
+  if (feeling === "neutral") {
+    return "feeling neutral";
+  }
+
+  return "feeling bad";
 }
 
-function formatDateLabel(day: string) {
-  return new Intl.DateTimeFormat("en-US", {
+function getLocalDayStart(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function getRelativeDayLabel(date: Date, reference = new Date()) {
+  const dayMs = 24 * 60 * 60 * 1000;
+  const target = getLocalDayStart(date).getTime();
+  const current = getLocalDayStart(reference).getTime();
+  const diffDays = Math.round((current - target) / dayMs);
+
+  if (diffDays === 0) {
+    return "Today";
+  }
+
+  if (diffDays === 1) {
+    return "Yesterday";
+  }
+
+  if (diffDays === 2) {
+    return "2 days ago";
+  }
+
+  return null;
+}
+
+function formatPrettyDate(date: Date, preferRelative: boolean, includeTime: boolean) {
+  const absoluteDate = new Intl.DateTimeFormat("en-US", {
     dateStyle: "medium",
-  }).format(new Date(`${day}T00:00:00`));
+    ...(includeTime ? { timeStyle: "short" } : {}),
+  }).format(date);
+  const relative = preferRelative ? getRelativeDayLabel(date) : null;
+
+  return relative ?? absoluteDate;
+}
+
+function formatReadingTime(measuredAt: string, preferRelative = false) {
+  return formatPrettyDate(new Date(measuredAt), preferRelative, true);
 }
 
 function getChronologicalReadings(readings: BloodPressureReading[]) {
@@ -524,10 +572,12 @@ function BloodPressureChart({
   readings,
   timeRange,
   onTimeRangeChange,
+  preferRelativeDates,
 }: {
   readings: BloodPressureReading[];
   timeRange: BloodPressureRange;
   onTimeRangeChange: (range: BloodPressureRange) => void;
+  preferRelativeDates: boolean;
 }) {
   const chronological = getChronologicalReadings(readings);
   const [selectedReadingId, setSelectedReadingId] = useState<string | null>(null);
@@ -638,11 +688,11 @@ function BloodPressureChart({
             className="chart-selection"
             type="button"
             onClick={() => handleReadingSelect(selectedReading.id)}
-            aria-label={`Selected reading ${formatReadingLabel(selectedReading)} from ${formatReadingTime(selectedReading.measured_at)}`}
+            aria-label={`Selected reading ${formatReadingLabel(selectedReading)} from ${formatReadingTime(selectedReading.measured_at, preferRelativeDates)}`}
           >
             <span>Selected</span>
             <strong>{formatReadingLabel(selectedReading)}</strong>
-            <small>{formatReadingTime(selectedReading.measured_at)}</small>
+            <small suppressHydrationWarning>{formatReadingTime(selectedReading.measured_at, preferRelativeDates)}</small>
           </button>
         ) : null}
       </div>
@@ -723,7 +773,13 @@ function BloodPressureChart({
             return (
               <g key={`axis-${point.id}`}>
                 <line className="chart-axis-tick" x1={chartPoint.x} x2={chartPoint.x} y1={axisY} y2={axisY + 8} />
-                <text className="chart-axis-label" x={chartPoint.x} y={axisY + 24} textAnchor="middle">
+                <text
+                  suppressHydrationWarning
+                  className="chart-axis-label"
+                  x={chartPoint.x}
+                  y={axisY + 24}
+                  textAnchor="middle"
+                >
                   {formatChartAxisLabel(point.measured_at)}
                 </text>
               </g>
@@ -752,6 +808,7 @@ export default function HomePage() {
   const [status, setStatus] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [readings, setReadings] = useState<BloodPressureReading[]>([]);
+  const [dailyFactorsByDay, setDailyFactorsByDay] = useState<Record<string, DailyFactorRow>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isAddModalMounted, setIsAddModalMounted] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -786,17 +843,24 @@ export default function HomePage() {
         if (!supabase) {
           throw new Error("Supabase is not configured yet.");
         }
-        const { data, error } = await supabase
-          .from("blood_pressure_readings")
-          .select("id, systolic, diastolic, measured_at")
-          .order("measured_at", { ascending: false });
+        const [readingsResult, factorsResult] = await Promise.all([
+          supabase
+            .from("blood_pressure_readings")
+            .select("id, systolic, diastolic, measured_at")
+            .order("measured_at", { ascending: false }),
+          supabase.from("daily_factors").select("day, slept_or_napped, had_alcohol, feeling"),
+        ]);
 
-        if (error) {
-          throw error;
+        if (readingsResult.error) {
+          throw readingsResult.error;
         }
 
         if (isActive) {
-          setReadings((data ?? []) as BloodPressureReading[]);
+          setReadings((readingsResult.data ?? []) as BloodPressureReading[]);
+          const factorsMap = Object.fromEntries(
+            ((factorsResult.data ?? []) as DailyFactorRow[]).map((row) => [row.day, row]),
+          ) as Record<string, DailyFactorRow>;
+          setDailyFactorsByDay(factorsMap);
         }
       } catch (error) {
         if (isActive) {
@@ -950,16 +1014,23 @@ export default function HomePage() {
     if (!supabase) {
       throw new Error("Supabase is not configured yet.");
     }
-    const { data, error } = await supabase
-      .from("blood_pressure_readings")
-      .select("id, systolic, diastolic, measured_at")
-      .order("measured_at", { ascending: false });
+    const [readingsResult, factorsResult] = await Promise.all([
+      supabase
+        .from("blood_pressure_readings")
+        .select("id, systolic, diastolic, measured_at")
+        .order("measured_at", { ascending: false }),
+      supabase.from("daily_factors").select("day, slept_or_napped, had_alcohol, feeling"),
+    ]);
 
-    if (error) {
-      throw error;
+    if (readingsResult.error) {
+      throw readingsResult.error;
     }
 
-    setReadings((data ?? []) as BloodPressureReading[]);
+    setReadings((readingsResult.data ?? []) as BloodPressureReading[]);
+    const factorsMap = Object.fromEntries(
+      ((factorsResult.data ?? []) as DailyFactorRow[]).map((row) => [row.day, row]),
+    ) as Record<string, DailyFactorRow>;
+    setDailyFactorsByDay(factorsMap);
   }
 
   async function handleDelete(reading: BloodPressureReading) {
@@ -968,7 +1039,9 @@ export default function HomePage() {
       return;
     }
 
-    const confirmed = window.confirm(`Delete ${formatReadingLabel(reading)} from ${formatReadingTime(reading.measured_at)}?`);
+    const confirmed = window.confirm(
+      `Delete ${formatReadingLabel(reading)} from ${formatReadingTime(reading.measured_at, isMounted)}?`,
+    );
     if (!confirmed) {
       return;
     }
@@ -1063,8 +1136,8 @@ export default function HomePage() {
               <span className="bp-diastolic">{latestDiastolic}</span>
             </strong>
             <span className="hero-stat-unit">mmHg</span>
-            <span className="hero-stat-footnote">
-              {latestReading ? formatReadingTime(latestReading.measured_at) : "No latest reading"}
+            <span className="hero-stat-footnote" suppressHydrationWarning>
+              {latestReading ? formatReadingTime(latestReading.measured_at, isMounted) : "No latest reading"}
             </span>
           </div>
 
@@ -1076,7 +1149,9 @@ export default function HomePage() {
               <span className="bp-diastolic">{averageDiastolic}</span>
             </strong>
             <span className="hero-stat-unit">mmHg</span>
-            <span className="hero-stat-footnote">Based on {rangeReadings.length} readings</span>
+            <span className="hero-stat-footnote" suppressHydrationWarning>
+              Based on {rangeReadings.length} readings
+            </span>
           </div>
         </div>
         {!latestReading ? <p className="page-hero-note">No readings yet.</p> : null}
@@ -1090,6 +1165,7 @@ export default function HomePage() {
             readings={readings}
             timeRange={chartRange}
             onTimeRangeChange={setChartRange}
+            preferRelativeDates={isMounted}
           />
         )}
       </section>
@@ -1123,23 +1199,43 @@ export default function HomePage() {
           <p className="status history-copy">No readings yet.</p>
         ) : (
           <ul className="history-list">
-            {readings.map((reading) => (
-              <li key={reading.id} className="history-item">
-                <div className="history-meta">
-                  <strong>
-                    {formatReadingLabel(reading)}
-                  </strong>
-                  <p>{formatReadingTime(reading.measured_at)}</p>
-                </div>
-                <button
-                  className="history-delete"
-                  type="button"
-                  onClick={() => void handleDelete(reading)}
-                >
-                  Delete
-                </button>
-              </li>
-            ))}
+            {readings.map((reading) => {
+              const readingDay = toDateInputValue(new Date(reading.measured_at));
+              const dailyFactors = dailyFactorsByDay[readingDay];
+
+              return (
+                <li key={reading.id} className="history-item">
+                  <div className="history-content">
+                    <div className="history-meta">
+                      <strong>{formatReadingLabel(reading)}</strong>
+                      <span className="history-date" suppressHydrationWarning>
+                        {formatReadingTime(reading.measured_at, isMounted)}
+                      </span>
+                    </div>
+                    <div className="history-chips">
+                      <span className="history-chip">
+                        {getBloodPressurePeriodLabel(getBloodPressurePeriodFromTimestamp(reading.measured_at)).toLowerCase()}
+                      </span>
+                      {dailyFactors?.had_alcohol ? <span className="history-chip">had alcohol</span> : null}
+                      {dailyFactors?.slept_or_napped ? <span className="history-chip">slept / nap</span> : null}
+                      <span className="history-chip">
+                        {formatHistoryFeeling(dailyFactors?.feeling ?? "neutral")}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    className="history-delete"
+                    type="button"
+                    aria-label={`Delete ${formatReadingLabel(reading)} from ${formatReadingTime(reading.measured_at, isMounted)}`}
+                    onClick={() => void handleDelete(reading)}
+                  >
+                    <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
+                      <path d="M9 3.75A1.75 1.75 0 0 1 10.75 2h2.5A1.75 1.75 0 0 1 15 3.75V4h3.25a.75.75 0 0 1 0 1.5h-.57l-.77 11.07A2.25 2.25 0 0 1 14.66 18H9.34a2.25 2.25 0 0 1-2.25-2.43L6.32 5.5h-.57a.75.75 0 0 1 0-1.5H9v-.25Zm1.5.25v.25h3v-.25a.25.25 0 0 0-.25-.25h-2.5a.25.25 0 0 0-.25.25Zm-1.82 1.5.7 10.07c.02.38.34.68.72.68h5.4c.38 0 .7-.3.72-.68l.7-10.07H8.68Zm1.57 2.25a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5a.75.75 0 0 1 .75-.75Zm4.5 0a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5a.75.75 0 0 1 .75-.75Z" />
+                    </svg>
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         )}
       </details>

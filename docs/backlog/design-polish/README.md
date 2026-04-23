@@ -35,5 +35,5 @@ Dark mode is the only intended theme. Keep the UI dark by default and avoid ligh
 
 1. [card-01-mobile-first-layout.md](./card-01-mobile-first-layout.md) - done
 2. [card-02-input-ux-reduction.md](./card-02-input-ux-reduction.md) - done
-3. [card-03-visual-style-dark-mode.md](./card-03-visual-style-dark-mode.md) - pending
+3. [card-03-visual-style-dark-mode.md](./card-03-visual-style-dark-mode.md) - done
 4. [card-04-dashboard-polish.md](./card-04-dashboard-polish.md) - done

@@ -1,12 +1,12 @@
 :root {
-  color-scheme: light;
-  --bg: #f5f1e8;
-  --bg-accent: #e6efe7;
-  --ink: #172027;
-  --muted: #5f6b73;
-  --card: rgba(255, 255, 255, 0.72);
-  --line: rgba(23, 32, 39, 0.12);
-  --shadow: 0 24px 60px rgba(23, 32, 39, 0.12);
+  color-scheme: dark;
+  --bg: #0a0f14;
+  --bg-accent: #101720;
+  --ink: #eef2f6;
+  --muted: #9aa7b4;
+  --card: rgba(14, 20, 28, 0.86);
+  --line: rgba(255, 255, 255, 0.08);
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.38);
 }
 
 * {
@@ -23,8 +23,8 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   color: var(--ink);
   background:
-    radial-gradient(circle at top left, rgba(188, 208, 196, 0.55), transparent 34%),
-    radial-gradient(circle at top right, rgba(220, 232, 243, 0.7), transparent 26%),
+    radial-gradient(circle at top left, rgba(70, 104, 139, 0.24), transparent 28%),
+    radial-gradient(circle at top right, rgba(58, 76, 103, 0.2), transparent 24%),
     linear-gradient(180deg, var(--bg) 0%, var(--bg-accent) 100%);
 }
 
@@ -122,7 +122,7 @@ h2 {
   padding: 12px 10px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.04);
   text-decoration: none;
   font-weight: 700;
   color: var(--ink);
@@ -168,14 +168,14 @@ ul {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--ink);
   padding: 14px 16px;
   font: inherit;
 }
 
 .field input:focus {
-  outline: 2px solid rgba(23, 32, 39, 0.2);
+  outline: 2px solid rgba(124, 169, 224, 0.45);
   outline-offset: 2px;
 }
 
@@ -183,19 +183,19 @@ ul {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--ink);
   padding: 14px 16px;
   font: inherit;
 }
 
 .field select:focus {
-  outline: 2px solid rgba(23, 32, 39, 0.2);
+  outline: 2px solid rgba(124, 169, 224, 0.45);
   outline-offset: 2px;
 }
 
 input[type="checkbox"] {
-  accent-color: var(--ink);
+  accent-color: #8eb2e8;
 }
 
 .form-separator {
@@ -253,7 +253,7 @@ button:disabled {
 .chip {
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--ink);
   padding: 11px 14px;
   font: inherit;
@@ -292,7 +292,7 @@ button:disabled {
 .history-count {
   border-radius: 999px;
   padding: 4px 10px;
-  background: rgba(23, 32, 39, 0.08);
+  background: rgba(255, 255, 255, 0.06);
   font-size: 0.92rem;
   color: var(--muted);
 }
@@ -323,7 +323,7 @@ button:disabled {
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--muted);
   min-width: 96px;
 }
@@ -357,7 +357,7 @@ button:disabled {
   gap: 16px;
   border: 1px solid var(--line);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.04);
   padding: 16px 18px;
 }
 
@@ -377,8 +377,8 @@ button:disabled {
 
 .history-delete {
   background: transparent;
-  color: #8d3c27;
-  border: 1px solid rgba(141, 60, 39, 0.2);
+  color: #ef9d82;
+  border: 1px solid rgba(239, 157, 130, 0.25);
   padding: 10px 14px;
   font-weight: 700;
 }
@@ -424,7 +424,7 @@ button:disabled {
 }
 
 .chart-grid {
-  stroke: rgba(23, 32, 39, 0.1);
+  stroke: rgba(255, 255, 255, 0.08);
   stroke-width: 1;
 }
 
@@ -449,7 +449,7 @@ button:disabled {
 }
 
 .chart-point {
-  stroke: #fff;
+  stroke: #111820;
   stroke-width: 2;
 }
 
@@ -519,7 +519,7 @@ button:disabled {
     top: 0;
     z-index: 10;
     padding: 4px 0;
-    background: linear-gradient(180deg, rgba(245, 241, 232, 0.96), rgba(245, 241, 232, 0.86));
+    background: linear-gradient(180deg, rgba(10, 15, 20, 0.96), rgba(10, 15, 20, 0.82));
     backdrop-filter: blur(10px);
   }
 

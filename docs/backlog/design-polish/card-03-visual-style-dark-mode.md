@@ -17,7 +17,10 @@ Define a more polished visual style.
 - Styling direction is clear and consistent
 - Readability and contrast remain strong
 
+## Status
+
+- Done
+
 ## Notes
 
 - Focus on a coherent visual system rather than decorative complexity
-

@@ -21,6 +21,12 @@ type BloodPressureReading = {
   measured_at: string;
 };
 
+type MeasurementTagRow = {
+  id: string;
+  name: string;
+  created_at: string;
+};
+
 type DailyFeeling = "good_productive" | "neutral" | "bad";
 type BloodPressurePeriod = "morning" | "lunch" | "evening";
 
@@ -141,6 +147,10 @@ function formatHistoryFeeling(feeling: DailyFeeling) {
   }
 
   return "feeling bad";
+}
+
+function normalizeMeasurementTagName(name: string) {
+  return name.trim().replace(/\s+/g, " ");
 }
 
 function getLocalDayStart(date: Date) {
@@ -347,6 +357,11 @@ function BloodPressureEntryModal({
   setMeasuredDay,
   measuredPeriod,
   setMeasuredPeriod,
+  measurementTags,
+  tagDraft,
+  setTagDraft,
+  tagStatus,
+  onCreateTag,
   dailySleptOrNapped,
   setDailySleptOrNapped,
   dailyHadAlcohol,
@@ -369,6 +384,11 @@ function BloodPressureEntryModal({
   setMeasuredDay: (value: string) => void;
   measuredPeriod: BloodPressurePeriod;
   setMeasuredPeriod: (value: BloodPressurePeriod) => void;
+  measurementTags: MeasurementTagRow[];
+  tagDraft: string;
+  setTagDraft: (value: string) => void;
+  tagStatus: string | null;
+  onCreateTag: () => void;
   dailySleptOrNapped: boolean;
   setDailySleptOrNapped: Dispatch<SetStateAction<boolean>>;
   dailyHadAlcohol: boolean;
@@ -381,6 +401,7 @@ function BloodPressureEntryModal({
   const systolicInputRef = useRef<HTMLInputElement>(null);
   const diastolicInputRef = useRef<HTMLInputElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
+  const tagInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isOpen) {
@@ -521,6 +542,56 @@ function BloodPressureEntryModal({
                     {getBloodPressurePeriodLabel(period)}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            <div className="chip-stack" aria-label="Measurement tags">
+              <span className="field-label">Tags</span>
+              <div className="tag-entry-row">
+                <input
+                  ref={tagInputRef}
+                  aria-label="Add a tag"
+                  autoComplete="off"
+                  className="tag-input"
+                  enterKeyHint="done"
+                  placeholder="Add a tag"
+                  type="text"
+                  value={tagDraft}
+                  onChange={(event) => setTagDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      onCreateTag();
+                    }
+                  }}
+                />
+                <button
+                  className="tag-add-button"
+                  type="button"
+                  disabled={!supabaseConfigured || isSaving}
+                  onClick={onCreateTag}
+                >
+                  Add tag
+                </button>
+              </div>
+              {tagStatus ? <p className="status tag-status">{tagStatus}</p> : null}
+              <div className="chip-row">
+                {measurementTags.length === 0 ? (
+                  <p className="status tag-empty">No tags yet. Add one to get started.</p>
+                ) : (
+                  measurementTags.map((tag) => (
+                    <ChipButton
+                      key={tag.id}
+                      active={normalizeMeasurementTagName(tagDraft).toLowerCase() === normalizeMeasurementTagName(tag.name).toLowerCase()}
+                      onClick={() => {
+                        setTagDraft(tag.name);
+                        tagInputRef.current?.focus();
+                      }}
+                    >
+                      {tag.name}
+                    </ChipButton>
+                  ))
+                )}
               </div>
             </div>
 
@@ -841,6 +912,9 @@ export default function HomePage() {
   const [dailySleptOrNapped, setDailySleptOrNapped] = useState(false);
   const [dailyHadAlcohol, setDailyHadAlcohol] = useState(false);
   const [dailyFeeling, setDailyFeeling] = useState<DailyFeeling>("neutral");
+  const [measurementTags, setMeasurementTags] = useState<MeasurementTagRow[]>([]);
+  const [tagDraft, setTagDraft] = useState("");
+  const [tagStatus, setTagStatus] = useState<string | null>(null);
   const [chartRange, setChartRange] = useState<BloodPressureRange>("all");
   const [status, setStatus] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -866,7 +940,7 @@ export default function HomePage() {
   useEffect(() => {
     let isActive = true;
 
-    async function loadReadings() {
+    async function loadReadingsAndTags() {
       if (!supabaseConfigured) {
         if (isActive) {
           setStatus("Supabase is not configured yet. Add the env vars to enable saving and history.");
@@ -880,16 +954,26 @@ export default function HomePage() {
         if (!supabase) {
           throw new Error("Supabase is not configured yet.");
         }
-        const [readingsResult, factorsResult] = await Promise.all([
+        const [readingsResult, factorsResult, tagsResult] = await Promise.all([
           supabase
             .from("blood_pressure_readings")
             .select("id, systolic, diastolic, measured_at")
             .order("measured_at", { ascending: false }),
           supabase.from("daily_factors").select("day, slept_or_napped, had_alcohol, feeling"),
+          supabase
+            .from("measurement_tags")
+            .select("id, name, created_at")
+            .order("created_at", { ascending: false }),
         ]);
 
         if (readingsResult.error) {
           throw readingsResult.error;
+        }
+        if (factorsResult.error) {
+          throw factorsResult.error;
+        }
+        if (tagsResult.error) {
+          throw tagsResult.error;
         }
 
         if (isActive) {
@@ -898,6 +982,7 @@ export default function HomePage() {
             ((factorsResult.data ?? []) as DailyFactorRow[]).map((row) => [row.day, row]),
           ) as Record<string, DailyFactorRow>;
           setDailyFactorsByDay(factorsMap);
+          setMeasurementTags((tagsResult.data ?? []) as MeasurementTagRow[]);
         }
       } catch (error) {
         if (isActive) {
@@ -910,7 +995,7 @@ export default function HomePage() {
       }
     }
 
-    void loadReadings();
+    void loadReadingsAndTags();
 
     return () => {
       isActive = false;
@@ -1029,6 +1114,8 @@ export default function HomePage() {
     setDailySleptOrNapped(false);
     setDailyHadAlcohol(false);
     setDailyFeeling("neutral");
+    setTagDraft("");
+    setTagStatus(null);
     setStatus(null);
     setIsAddModalMounted(true);
   }
@@ -1051,16 +1138,26 @@ export default function HomePage() {
     if (!supabase) {
       throw new Error("Supabase is not configured yet.");
     }
-    const [readingsResult, factorsResult] = await Promise.all([
+    const [readingsResult, factorsResult, tagsResult] = await Promise.all([
       supabase
         .from("blood_pressure_readings")
         .select("id, systolic, diastolic, measured_at")
         .order("measured_at", { ascending: false }),
       supabase.from("daily_factors").select("day, slept_or_napped, had_alcohol, feeling"),
+      supabase
+        .from("measurement_tags")
+        .select("id, name, created_at")
+        .order("created_at", { ascending: false }),
     ]);
 
     if (readingsResult.error) {
       throw readingsResult.error;
+    }
+    if (factorsResult.error) {
+      throw factorsResult.error;
+    }
+    if (tagsResult.error) {
+      throw tagsResult.error;
     }
 
     setReadings((readingsResult.data ?? []) as BloodPressureReading[]);
@@ -1068,6 +1165,51 @@ export default function HomePage() {
       ((factorsResult.data ?? []) as DailyFactorRow[]).map((row) => [row.day, row]),
     ) as Record<string, DailyFactorRow>;
     setDailyFactorsByDay(factorsMap);
+    setMeasurementTags((tagsResult.data ?? []) as MeasurementTagRow[]);
+  }
+
+  async function handleCreateMeasurementTag() {
+    if (!supabaseConfigured) {
+      setTagStatus("Supabase is not configured yet. Add the env vars to save tags.");
+      return;
+    }
+
+    const normalizedName = normalizeMeasurementTagName(tagDraft);
+    if (!normalizedName) {
+      setTagStatus("Enter a tag name first.");
+      return;
+    }
+
+    const normalizedLookup = normalizedName.toLowerCase();
+    const existingTag = measurementTags.find(
+      (tag) => normalizeMeasurementTagName(tag.name).toLowerCase() === normalizedLookup,
+    );
+
+    if (existingTag) {
+      setTagDraft(existingTag.name);
+      setTagStatus("That tag already exists.");
+      return;
+    }
+
+    setTagStatus(null);
+
+    try {
+      const supabase = createSupabaseBrowserClient();
+      if (!supabase) {
+        throw new Error("Supabase is not configured yet.");
+      }
+
+      const { error } = await supabase.from("measurement_tags").insert({ name: normalizedName });
+      if (error) {
+        throw error;
+      }
+
+      await reloadReadings();
+      setTagDraft("");
+      setTagStatus("Tag saved.");
+    } catch (error) {
+      setTagStatus(error instanceof Error ? error.message : "Unable to save tag.");
+    }
   }
 
   async function handleDelete(reading: BloodPressureReading) {
@@ -1293,6 +1435,11 @@ export default function HomePage() {
         setMeasuredDay={setMeasuredDay}
         measuredPeriod={measuredPeriod}
         setMeasuredPeriod={setMeasuredPeriod}
+        measurementTags={measurementTags}
+        tagDraft={tagDraft}
+        setTagDraft={setTagDraft}
+        tagStatus={tagStatus}
+        onCreateTag={() => void handleCreateMeasurementTag()}
         dailySleptOrNapped={dailySleptOrNapped}
         setDailySleptOrNapped={setDailySleptOrNapped}
         dailyHadAlcohol={dailyHadAlcohol}

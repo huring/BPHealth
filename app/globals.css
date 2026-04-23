@@ -268,6 +268,68 @@ button:focus-visible {
   gap: 8px;
 }
 
+.tag-entry-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.tag-input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink);
+  padding: 12px 14px;
+  font: inherit;
+}
+
+.tag-input::placeholder {
+  color: rgba(154, 167, 180, 0.72);
+}
+
+.tag-input:focus {
+  outline: 2px solid rgba(124, 169, 224, 0.45);
+  outline-offset: 2px;
+}
+
+.tag-add-button {
+  min-height: 44px;
+  border: 1px solid rgba(124, 169, 224, 0.24);
+  border-radius: 14px;
+  background: rgba(124, 169, 224, 0.12);
+  color: var(--ink);
+  padding: 0 14px;
+  font: inherit;
+  font-weight: 700;
+  transition:
+    transform 120ms ease,
+    opacity 120ms ease,
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.tag-add-button:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+.tag-add-button:focus-visible {
+  outline: 2px solid rgba(124, 169, 224, 0.45);
+  outline-offset: 2px;
+}
+
+.tag-add-button:disabled {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--line);
+}
+
+.tag-empty,
+.tag-status {
+  margin-top: -2px;
+}
+
 .chip {
   min-height: 44px;
   border: 1px solid var(--line);
@@ -1115,6 +1177,14 @@ button:focus-visible {
 
   .hero-stat-value {
     font-size: clamp(1.9rem, 9vw, 2.6rem);
+  }
+
+  .tag-entry-row {
+    grid-template-columns: 1fr;
+  }
+
+  .tag-add-button {
+    width: 100%;
   }
 
   .chart-axis-label {

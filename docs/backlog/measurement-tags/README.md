@@ -1,7 +1,7 @@
 # Measurement Tags
 
 ## Feature Goal
-Replace the current fixed daily factors with a flexible tagging system that can be attached to each blood pressure measurement.
+Replace the current fixed daily factors with a flexible tagging system attached to each blood pressure measurement, then fully retire the old daily factors flow once the tag-based flow is stable.
 
 ## Why Tags Are Better Than Fixed Inputs
 - Tags are reusable instead of being locked to a small set of predefined options.
@@ -24,6 +24,7 @@ Tags are scoped to the daily context around a measurement, not long-term states.
 - Tags attached to measurements
 - Automatic time-of-day tags
 - Future-ready filtering and averages
+- Daily factors migration and cleanup
 
 ## Out Of Scope
 - Rich analytics dashboards
@@ -39,3 +40,4 @@ Tags are scoped to the daily context around a measurement, not long-term states.
 4. Measurement integration
 5. Automatic tags
 6. Future filtering and averages
+7. Daily factors migration and cleanup

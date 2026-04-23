@@ -19,11 +19,17 @@ Blood pressure readings are naturally range-based. Showing systolic and diastoli
 - Keep the current chart feel, only change the data visualization
 
 ## V1 Scope
-- Vertical range bars for each reading
-- Pill-like body for each range
-- Keep endpoint markers for systolic and diastolic
-- Keep selected-state behavior
-- Keep the current range selector and time filtering
+- [x] Vertical range bars for each reading
+- [x] Pill-like body for each range
+- [x] Keep endpoint markers for systolic and diastolic
+- [x] Keep selected-state behavior
+- [x] Keep the current range selector and time filtering
+
+## Card Status
+- [x] Card 01: Chart Range Geometry
+- [x] Card 02: Selection and Interaction
+- [ ] Card 03: Axis Density and Spacing
+- [ ] Card 04: Visual Polish
 
 ## Out Of Scope
 - New analytics
@@ -37,4 +43,3 @@ Blood pressure readings are naturally range-based. Showing systolic and diastoli
 2. Selection and interaction behavior
 3. Axis density and spacing tuning
 4. Visual polish and edge cases
-

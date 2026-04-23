@@ -568,6 +568,7 @@ button:focus-visible {
   fill: url(#bp-range-fill);
   stroke: rgba(255, 255, 255, 0.08);
   stroke-width: 1;
+  cursor: pointer;
   transition:
     opacity 140ms ease,
     fill 140ms ease,

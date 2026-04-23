@@ -38,6 +38,13 @@
 - [x] Card 03: Interactions
 - [x] Card 04: Time Range Controls
 
+## BP Range Chart Card Status
+
+- [x] Card 01: Chart Geometry
+- [x] Card 02: Selection and Interaction
+- [ ] Card 03: Axis Density and Spacing
+- [ ] Card 04: Visual Polish
+
 ## Mobile App Experience Card Status
 
 - [x] Card 01: PWA Foundation

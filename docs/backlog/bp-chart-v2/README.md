@@ -34,3 +34,10 @@ Create a more premium, mobile-first blood pressure chart that is easier to read 
 2. [card-02-visual-style.md](./card-02-visual-style.md)
 3. [card-03-interactions.md](./card-03-interactions.md)
 4. [card-04-time-range-controls.md](./card-04-time-range-controls.md)
+
+## Card Status
+
+1. Card 01: Done
+2. Card 02: Pending
+3. Card 03: Pending
+4. Card 04: Pending

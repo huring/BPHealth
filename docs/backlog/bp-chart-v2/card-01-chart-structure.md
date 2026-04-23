@@ -18,6 +18,10 @@ Define the data representation for the upgraded blood pressure chart.
 - The design supports the existing reading data without needing new data fields
 - Vertical range lines and dual series behavior are specified cleanly
 
+## Status
+
+- Done
+
 ## Notes
 
 - Keep the structure simple enough to implement without charting framework complexity

@@ -35,6 +35,11 @@ type ChartPoint = {
   y: number;
 };
 
+type AverageReading = {
+  systolic: number;
+  diastolic: number;
+};
+
 function toDateInputValue(date: Date) {
   const offsetMs = date.getTimezoneOffset() * 60_000;
   const localTime = new Date(date.getTime() - offsetMs);
@@ -83,6 +88,10 @@ function formatReadingTime(measuredAt: string) {
 }
 
 function formatReadingLabel(reading: BloodPressureReading) {
+  return `${reading.systolic}/${reading.diastolic}`;
+}
+
+function formatAverageLabel(reading: AverageReading) {
   return `${reading.systolic}/${reading.diastolic}`;
 }
 
@@ -137,6 +146,39 @@ function formatChartTickValue(value: number) {
   return Math.round(value).toString();
 }
 
+function formatChartAxisLabel(measuredAt: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  }).format(new Date(measuredAt));
+}
+
+function getAverageReading(readings: BloodPressureReading[]) {
+  if (readings.length === 0) {
+    return null;
+  }
+
+  const totalSystolic = readings.reduce((sum, reading) => sum + reading.systolic, 0);
+  const totalDiastolic = readings.reduce((sum, reading) => sum + reading.diastolic, 0);
+
+  return {
+    systolic: Math.round(totalSystolic / readings.length),
+    diastolic: Math.round(totalDiastolic / readings.length),
+  } satisfies AverageReading;
+}
+
+function getChartAxisTickIndexes(length: number, maxTicks = 5) {
+  if (length <= maxTicks) {
+    return Array.from({ length }, (_, index) => index);
+  }
+
+  const indexes = Array.from({ length: maxTicks }, (_, index) =>
+    Math.round((index * (length - 1)) / (maxTicks - 1)),
+  );
+
+  return Array.from(new Set(indexes)).sort((left, right) => left - right);
+}
+
 function ChipButton({
   active,
   children,
@@ -160,14 +202,16 @@ function ChipButton({
 
 function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) {
   const chronological = getChronologicalReadings(readings);
+  const averageReading = getAverageReading(chronological);
 
   if (chronological.length === 0) {
     return <p className="status">No chart data yet.</p>;
   }
 
   const width = 640;
-  const height = 260;
-  const padding = 28;
+  const height = 324;
+  const padding = 32;
+  const axisY = height - 34;
   const allValues = chronological.flatMap((reading) => [reading.systolic, reading.diastolic]);
   const minValue = Math.min(...allValues) - 10;
   const maxValue = Math.max(...allValues) + 10;
@@ -190,18 +234,28 @@ function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) 
     maxValue,
   );
   const yTicks = [maxValue, (maxValue + minValue) / 2, minValue];
+  const axisTickIndexes = getChartAxisTickIndexes(chronological.length);
 
   return (
     <div className="chart">
-      <div className="chart-legend">
-        <span>
-          <i className="legend-systolic" />
-          Systolic
-        </span>
-        <span>
-          <i className="legend-diastolic" />
-          Diastolic
-        </span>
+      <div className="chart-meta">
+        <div className="chart-legend">
+          <span>
+            <i className="legend-systolic" />
+            Systolic
+          </span>
+          <span>
+            <i className="legend-diastolic" />
+            Diastolic
+          </span>
+        </div>
+
+        {averageReading ? (
+          <div className="chart-average" aria-label={`Average blood pressure ${averageReading.systolic}/${averageReading.diastolic}`}>
+            <span>Average</span>
+            <strong>{formatAverageLabel(averageReading)}</strong>
+          </div>
+        ) : null}
       </div>
 
       <svg
@@ -224,22 +278,38 @@ function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) 
           );
         })}
 
+        {chronological.map((reading, index) => {
+          const systolicPoint = systolicPoints[index];
+          const diastolicPoint = diastolicPoints[index];
+          const topY = Math.min(systolicPoint.y, diastolicPoint.y);
+          const bottomY = Math.max(systolicPoint.y, diastolicPoint.y);
+
+          return (
+            <g key={`range-${reading.id}`}>
+              <line className="chart-range" x1={systolicPoint.x} x2={diastolicPoint.x} y1={topY} y2={bottomY} />
+              <circle className="chart-range-point chart-range-point-systolic" cx={systolicPoint.x} cy={systolicPoint.y} r="4.5" />
+              <circle className="chart-range-point chart-range-point-diastolic" cx={diastolicPoint.x} cy={diastolicPoint.y} r="4.5" />
+            </g>
+          );
+        })}
+
         <path className="chart-line chart-line-systolic" d={pointsToPath(systolicPoints)} />
         <path className="chart-line chart-line-diastolic" d={pointsToPath(diastolicPoints)} />
 
-        {systolicPoints.map((point, index) => (
-          <circle key={`systolic-${chronological[index].id}`} className="chart-point chart-point-systolic" cx={point.x} cy={point.y} r="3.5" />
-        ))}
+        {axisTickIndexes.map((index) => {
+          const point = chronological[index];
+          const chartPoint = systolicPoints[index];
 
-        {diastolicPoints.map((point, index) => (
-          <circle key={`diastolic-${chronological[index].id}`} className="chart-point chart-point-diastolic" cx={point.x} cy={point.y} r="3.5" />
-        ))}
+          return (
+            <g key={`axis-${point.id}`}>
+              <line className="chart-axis-tick" x1={chartPoint.x} x2={chartPoint.x} y1={axisY} y2={axisY + 8} />
+              <text className="chart-axis-label" x={chartPoint.x} y={axisY + 24} textAnchor="middle">
+                {formatChartAxisLabel(point.measured_at)}
+              </text>
+            </g>
+          );
+        })}
       </svg>
-
-      <div className="chart-footnote">
-        <span>{formatReadingTime(chronological[0].measured_at)}</span>
-        <span>{formatReadingTime(chronological[chronological.length - 1].measured_at)}</span>
-      </div>
     </div>
   );
 }

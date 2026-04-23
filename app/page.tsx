@@ -659,7 +659,7 @@ function BloodPressureChart({
     setSelectedReadingId(readingId);
   }
 
-  function handleReadingKeyDown(event: KeyboardEvent<SVGCircleElement>, readingId: string) {
+  function handleReadingKeyDown(event: KeyboardEvent<SVGElement>, readingId: string) {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       setSelectedReadingId(readingId);
@@ -704,6 +704,13 @@ function BloodPressureChart({
           viewBox={`0 0 ${width} ${height}`}
           role="img"
         >
+          <defs>
+            <linearGradient id="bp-range-fill" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#a855f7" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.8" />
+            </linearGradient>
+          </defs>
+
           {yTicks.map((tickValue) => {
             const range = Math.max(maxValue - minValue, 1);
             const y = padding + (1 - (tickValue - minValue) / range) * (height - padding * 2);
@@ -723,6 +730,9 @@ function BloodPressureChart({
             const diastolicPoint = diastolicPoints[index];
             const topY = Math.min(systolicPoint.y, diastolicPoint.y);
             const bottomY = Math.max(systolicPoint.y, diastolicPoint.y);
+            const bodyHeight = Math.max(bottomY - topY, 14);
+            const bodyY = (topY + bottomY) / 2 - bodyHeight / 2;
+            const bodyX = systolicPoint.x - 7;
             const isSelected = reading.id === selectedReadingId;
 
             return (
@@ -730,12 +740,18 @@ function BloodPressureChart({
                 key={`range-${reading.id}`}
                 className={isSelected ? "chart-selected" : "chart-dimmed"}
               >
-                <line
-                  className="chart-range"
-                  x1={systolicPoint.x}
-                  x2={diastolicPoint.x}
-                  y1={topY}
-                  y2={bottomY}
+                <rect
+                  className="chart-range-body"
+                  x={bodyX}
+                  y={bodyY}
+                  width={14}
+                  height={bodyHeight}
+                  rx={7}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Select range ${formatReadingLabel(reading)} on ${formatChartAxisLabel(reading.measured_at)}`}
+                  onClick={() => handleReadingSelect(reading.id)}
+                  onKeyDown={(event) => handleReadingKeyDown(event, reading.id)}
                 />
                 <circle
                   className="chart-range-point chart-range-point-systolic"
@@ -762,9 +778,6 @@ function BloodPressureChart({
               </g>
             );
           })}
-
-          <path className="chart-line chart-line-systolic" d={pointsToPath(systolicPoints)} />
-          <path className="chart-line chart-line-diastolic" d={pointsToPath(diastolicPoints)} />
 
           {axisTickIndexes.map((index) => {
             const point = rangeReadings[index];

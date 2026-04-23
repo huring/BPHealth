@@ -564,33 +564,17 @@ button:focus-visible {
   font-size: 11px;
 }
 
-.chart-line {
-  fill: none;
-  stroke-width: 3;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.chart-range-body {
+  fill: url(#bp-range-fill);
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 1;
   transition:
     opacity 140ms ease,
+    fill 140ms ease,
     stroke 140ms ease,
-    stroke-width 140ms ease;
-}
-
-.chart-line-systolic {
-  stroke: #a855f7;
-}
-
-.chart-line-diastolic {
-  stroke: #60a5fa;
-}
-
-.chart-range {
-  stroke: rgba(170, 185, 204, 0.38);
-  stroke-width: 5;
-  stroke-linecap: round;
-  transition:
-    opacity 140ms ease,
-    stroke 140ms ease,
-    stroke-width 140ms ease;
+    transform 140ms ease;
+  transform-box: fill-box;
+  transform-origin: center;
 }
 
 .chart-range-point {
@@ -626,9 +610,9 @@ button:focus-visible {
   fill: #60a5fa;
 }
 
-.chart-selected .chart-range {
-  stroke: rgba(138, 92, 246, 0.8);
-  stroke-width: 6;
+.chart-selected .chart-range-body {
+  fill: url(#bp-range-fill);
+  stroke: rgba(255, 255, 255, 0.18);
 }
 
 .chart-selected .chart-range-point-systolic,
@@ -637,10 +621,16 @@ button:focus-visible {
   transform: scale(1.1);
 }
 
-.chart-dimmed .chart-range,
+.chart-dimmed .chart-range-body,
 .chart-dimmed .chart-range-point,
 .chart-dimmed .chart-line {
   opacity: 0.28;
+}
+
+.chart-range-body:hover,
+.chart-range-body:focus-visible {
+  outline: none;
+  transform: scaleX(1.04);
 }
 
 .chart-range-point:hover,

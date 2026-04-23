@@ -259,7 +259,6 @@ function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) 
   const [timeRange, setTimeRange] = useState<BloodPressureRange>("all");
   const [selectedReadingId, setSelectedReadingId] = useState<string | null>(null);
   const rangeReadings = filterBloodPressureReadingsByRange(chronological, timeRange);
-  const averageReading = getAverageReading(rangeReadings);
   const latestReading = rangeReadings[rangeReadings.length - 1] ?? null;
 
   useEffect(() => {
@@ -284,17 +283,6 @@ function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) 
   if (rangeReadings.length === 0) {
     return (
       <div className="chart">
-        {latestReading ? (
-          <div className="chart-hero">
-            <div>
-              <p className="chart-hero-label">Latest reading</p>
-              <p className="chart-hero-value">
-                {formatReadingLabel(latestReading)} <span>mmHg</span>
-              </p>
-            </div>
-          </div>
-        ) : null}
-
         <div className="chart-ranges" role="tablist" aria-label="Chart time range">
           {(["1d", "1w", "1m", "1y", "all"] as BloodPressureRange[]).map((range) => (
             <ChipButton key={range} active={timeRange === range} onClick={() => setTimeRange(range)}>
@@ -351,24 +339,6 @@ function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) 
 
   return (
     <div className="chart">
-      {latestReading ? (
-        <div className="chart-hero">
-          <div>
-            <p className="chart-hero-label">Latest reading</p>
-            <p className="chart-hero-value">
-              {formatReadingLabel(latestReading)} <span>mmHg</span>
-            </p>
-          </div>
-
-          {averageReading ? (
-            <div className="chart-average" aria-label={`Average blood pressure ${averageReading.systolic}/${averageReading.diastolic}`}>
-              <span>Average</span>
-              <strong>{formatAverageLabel(averageReading)}</strong>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-
       <div className="chart-ranges" role="tablist" aria-label="Chart time range">
         {(["1d", "1w", "1m", "1y", "all"] as BloodPressureRange[]).map((range) => (
           <ChipButton key={range} active={timeRange === range} onClick={() => setTimeRange(range)}>
@@ -606,7 +576,7 @@ function DailyFactorsPanel({ supabaseConfigured }: { supabaseConfigured: boolean
   }
 
   return (
-    <section className="panel" id="daily-factors">
+    <section className="page-section" id="daily-factors">
       <h2>Daily factors</h2>
       <p className="panel-lede">
         Keep daily input fast. One row per day is enough for this pass.
@@ -693,9 +663,11 @@ export default function HomePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [readings, setReadings] = useState<BloodPressureReading[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const chronologicalReadings = getChronologicalReadings(readings);
+  const latestReading = chronologicalReadings[chronologicalReadings.length - 1] ?? null;
+  const averageReading = getAverageReading(chronologicalReadings);
 
   const canSubmit = systolic.trim() !== "" && diastolic.trim() !== "" && measuredDay.trim() !== "";
-  const latestReading = readings[0] ?? null;
 
   useEffect(() => {
     let isActive = true;
@@ -834,42 +806,27 @@ export default function HomePage() {
 
   return (
     <main className="shell app-shell">
-      <header className="app-bar app-header">
-        <p className="eyebrow">BPHealth</p>
-        <p className="app-bar-copy">
-          Blood pressure first. The chart stays on top, with quick daily input below.
-        </p>
+      <header className="page-hero">
+        <p className="eyebrow">Latest reading</p>
+        {latestReading ? (
+          <>
+            <p className="page-hero-value">
+              {formatReadingLabel(latestReading)} <span>mmHg</span>
+            </p>
+            {averageReading ? (
+              <p className="page-hero-note">Average {formatAverageLabel(averageReading)}</p>
+            ) : null}
+          </>
+        ) : (
+          <p className="page-hero-note">No readings yet.</p>
+        )}
       </header>
 
-      <nav className="section-nav" aria-label="Quick sections">
-        <a href="#chart">Chart</a>
-        <a href="#daily-factors">Daily</a>
-        <a href="#history">History</a>
-      </nav>
-
-      <section className="panel" id="chart">
-        <div className="panel-heading">
-          <div>
-            <h2>Blood pressure</h2>
-            <p className="panel-lede panel-lede-tight">
-              The main view stays focused on the trend over time.
-            </p>
-          </div>
-          <div className="summary-chip" aria-live="polite">
-            {latestReading ? (
-              <>
-                <span>Latest</span>
-                <strong>{formatReadingLabel(latestReading)}</strong>
-              </>
-            ) : (
-              <span>No readings yet</span>
-            )}
-          </div>
-        </div>
+      <section className="page-section" id="chart">
         {isLoading ? <p className="status">Loading chart...</p> : <BloodPressureChart readings={readings} />}
       </section>
 
-      <section className="panel">
+      <section className="page-section">
         <h2>Add reading</h2>
         {!supabaseConfigured ? (
           <p className="status">
@@ -943,7 +900,7 @@ export default function HomePage() {
         </form>
       </section>
 
-      <details className="panel history-panel" id="history">
+      <details className="page-section history-panel" id="history">
         <summary>
           <span>Recent readings</span>
           <span className="history-count">{readings.length}</span>

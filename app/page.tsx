@@ -1,6 +1,6 @@
 "use client";
 
-import type { FormEvent, KeyboardEvent, ReactNode } from "react";
+import type { Dispatch, FormEvent, KeyboardEvent, ReactNode, SetStateAction } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   createSupabaseBrowserClient,
@@ -313,7 +313,7 @@ function ChipButton({
   );
 }
 
-type ShellSection = "latest" | "chart" | "add" | "history" | "daily";
+type ShellSection = "latest" | "chart" | "add" | "history";
 
 function getShellSectionLabel(section: ShellSection) {
   if (section === "latest") {
@@ -331,8 +331,6 @@ function getShellSectionLabel(section: ShellSection) {
   if (section === "history") {
     return "History";
   }
-
-  return "Daily";
 }
 
 function AppShellNav({
@@ -342,7 +340,7 @@ function AppShellNav({
   activeSection: ShellSection;
   onSelect: (section: ShellSection) => void;
 }) {
-  const sections: ShellSection[] = ["latest", "chart", "add", "history", "daily"];
+  const sections: ShellSection[] = ["latest", "chart", "add", "history"];
 
   function scrollToSection(section: ShellSection) {
     onSelect(section);
@@ -381,6 +379,12 @@ function BloodPressureEntryModal({
   setMeasuredDay,
   measuredPeriod,
   setMeasuredPeriod,
+  dailySleptOrNapped,
+  setDailySleptOrNapped,
+  dailyHadAlcohol,
+  setDailyHadAlcohol,
+  dailyFeeling,
+  setDailyFeeling,
   onClose,
   onSubmit,
 }: {
@@ -397,6 +401,12 @@ function BloodPressureEntryModal({
   setMeasuredDay: (value: string) => void;
   measuredPeriod: BloodPressurePeriod;
   setMeasuredPeriod: (value: BloodPressurePeriod) => void;
+  dailySleptOrNapped: boolean;
+  setDailySleptOrNapped: Dispatch<SetStateAction<boolean>>;
+  dailyHadAlcohol: boolean;
+  setDailyHadAlcohol: Dispatch<SetStateAction<boolean>>;
+  dailyFeeling: DailyFeeling;
+  setDailyFeeling: Dispatch<SetStateAction<DailyFeeling>>;
   onClose: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
@@ -541,6 +551,37 @@ function BloodPressureEntryModal({
                     onClick={() => setMeasuredPeriod(period)}
                   >
                     {getBloodPressurePeriodLabel(period)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="entry-modal-factors" aria-label="Daily factors">
+              <div className="chip-row">
+                <ChipButton
+                  active={dailySleptOrNapped}
+                  onClick={() => setDailySleptOrNapped((current) => !current)}
+                >
+                  Slept / nap
+                </ChipButton>
+                <ChipButton
+                  active={dailyHadAlcohol}
+                  onClick={() => setDailyHadAlcohol((current) => !current)}
+                >
+                  Alcohol
+                </ChipButton>
+              </div>
+
+              <div className="segmented" role="radiogroup" aria-label="Feeling">
+                {(["good_productive", "neutral", "bad"] as DailyFeeling[]).map((feeling) => (
+                  <button
+                    key={feeling}
+                    aria-pressed={dailyFeeling === feeling}
+                    className={`segmented-option${dailyFeeling === feeling ? " segmented-option-active" : ""}`}
+                    type="button"
+                    onClick={() => setDailyFeeling(feeling)}
+                  >
+                    {feeling === "good_productive" ? "Good" : feeling === "neutral" ? "Neutral" : "Bad"}
                   </button>
                 ))}
               </div>
@@ -769,242 +810,6 @@ function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) 
   );
 }
 
-function DailyFactorsPanel({ supabaseConfigured }: { supabaseConfigured: boolean }) {
-  const [day, setDay] = useState(() => toDateInputValue(new Date()));
-  const [sleptOrNapped, setSleptOrNapped] = useState(false);
-  const [hadAlcohol, setHadAlcohol] = useState(false);
-  const [feeling, setFeeling] = useState<DailyFeeling>("neutral");
-  const [dailyStatus, setDailyStatus] = useState<string | null>(null);
-  const [isLoadingDailyFactors, setIsLoadingDailyFactors] = useState(false);
-  const [isSavingDailyFactors, setIsSavingDailyFactors] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
-  const todayValue = toDateInputValue(new Date());
-  const yesterdayValue = shiftDateInputValue(todayValue, -1);
-
-  useEffect(() => {
-    setIsOnline(navigator.onLine);
-
-    function handleOnline() {
-      setIsOnline(true);
-    }
-
-    function handleOffline() {
-      setIsOnline(false);
-    }
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, []);
-
-  useEffect(() => {
-    let isActive = true;
-
-    async function loadDailyFactors() {
-      if (!supabaseConfigured) {
-        return;
-      }
-
-      setIsLoadingDailyFactors(true);
-      setDailyStatus(null);
-
-      const cacheKey = `${DAILY_FACTORS_CACHE_PREFIX}${day}`;
-      const cachedRow = readCachedJson<DailyFactorRow>(cacheKey);
-      if (cachedRow) {
-        setSleptOrNapped(cachedRow.slept_or_napped);
-        setHadAlcohol(cachedRow.had_alcohol);
-        setFeeling(cachedRow.feeling);
-        setDailyStatus(`Showing cached daily factors for ${formatDateLabel(day)}.`);
-      }
-
-      try {
-        const supabase = createSupabaseBrowserClient();
-        if (!supabase) {
-          throw new Error("Supabase is not configured yet.");
-        }
-
-        const { data, error } = await supabase
-          .from("daily_factors")
-          .select("day, slept_or_napped, had_alcohol, feeling")
-          .eq("day", day)
-          .maybeSingle();
-
-        if (error) {
-          throw error;
-        }
-
-        if (!isActive) {
-          return;
-        }
-
-        if (data) {
-          const row = data as DailyFactorRow;
-          setSleptOrNapped(row.slept_or_napped);
-          setHadAlcohol(row.had_alcohol);
-          setFeeling(row.feeling);
-          writeCachedJson(cacheKey, row);
-          setDailyStatus(`Loaded saved factors for ${formatDateLabel(day)}.`);
-        } else {
-          setSleptOrNapped(false);
-          setHadAlcohol(false);
-          setFeeling("neutral");
-          setDailyStatus(`No saved factors for ${formatDateLabel(day)} yet.`);
-        }
-      } catch (error) {
-        if (isActive) {
-          setDailyStatus(error instanceof Error ? error.message : "Unable to load daily factors.");
-        }
-      } finally {
-        if (isActive) {
-          setIsLoadingDailyFactors(false);
-        }
-      }
-    }
-
-    void loadDailyFactors();
-
-    return () => {
-      isActive = false;
-    };
-  }, [day, supabaseConfigured]);
-
-  async function handleDailySubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!supabaseConfigured) {
-      setDailyStatus("Supabase is not configured yet. Add the env vars to save daily factors.");
-      return;
-    }
-
-    if (!isOnline) {
-      setDailyStatus("You're offline. Daily factors can be viewed from cache, but saving needs a connection.");
-      return;
-    }
-
-    setIsSavingDailyFactors(true);
-    setDailyStatus(null);
-
-    try {
-      const supabase = createSupabaseBrowserClient();
-      if (!supabase) {
-        throw new Error("Supabase is not configured yet.");
-      }
-
-      const { error } = await supabase.from("daily_factors").upsert(
-        {
-          day,
-          slept_or_napped: sleptOrNapped,
-          had_alcohol: hadAlcohol,
-          feeling,
-        },
-        { onConflict: "day" },
-      );
-
-      if (error) {
-        throw error;
-      }
-
-      writeCachedJson(`${DAILY_FACTORS_CACHE_PREFIX}${day}`, {
-        day,
-        slept_or_napped: sleptOrNapped,
-        had_alcohol: hadAlcohol,
-        feeling,
-      } satisfies DailyFactorRow);
-      setDailyStatus(`Saved daily factors for ${formatDateLabel(day)}.`);
-    } catch (error) {
-      setDailyStatus(error instanceof Error ? error.message : "Unable to save daily factors.");
-    } finally {
-      setIsSavingDailyFactors(false);
-    }
-  }
-
-  return (
-    <section className="page-section" id="daily">
-      <h2>Daily factors</h2>
-      <p className="panel-lede">
-        Keep daily input fast. One row per day is enough for this pass.
-      </p>
-      {!supabaseConfigured ? (
-        <p className="status">
-          Supabase environment variables are missing. Add `NEXT_PUBLIC_SUPABASE_URL` and
-          `NEXT_PUBLIC_SUPABASE_ANON_KEY` to enable saving daily factors.
-        </p>
-      ) : null}
-      {!isOnline ? (
-        <p className="status">
-          You&apos;re offline. Cached daily factors are available, but saving needs a connection.
-        </p>
-      ) : null}
-      <form className="form daily-form" onSubmit={handleDailySubmit}>
-        <label className="field daily-date">
-          <span>Day</span>
-          <input
-            name="day"
-            type="date"
-            value={day}
-            onChange={(event) => setDay(event.target.value)}
-          />
-        </label>
-
-        <div className="chip-stack">
-          <span className="field-label">Quick day</span>
-          <div className="chip-row">
-            <ChipButton active={day === todayValue} onClick={() => setDay(todayValue)}>
-              Today
-            </ChipButton>
-            <ChipButton active={day === yesterdayValue} onClick={() => setDay(yesterdayValue)}>
-              Yesterday
-            </ChipButton>
-          </div>
-        </div>
-
-        <div className="chip-stack">
-          <span className="field-label">Sleep</span>
-          <div className="chip-row">
-            <ChipButton active={sleptOrNapped} onClick={() => setSleptOrNapped((current) => !current)}>
-              Slept / nap
-            </ChipButton>
-          </div>
-        </div>
-
-        <div className="chip-stack">
-          <span className="field-label">Alcohol</span>
-          <div className="chip-row">
-            <ChipButton active={hadAlcohol} onClick={() => setHadAlcohol((current) => !current)}>
-              Had alcohol
-            </ChipButton>
-          </div>
-        </div>
-
-        <div className="chip-stack">
-          <span className="field-label">Feeling</span>
-          <div className="chip-row">
-            <ChipButton active={feeling === "good_productive"} onClick={() => setFeeling("good_productive")}>
-              Good
-            </ChipButton>
-            <ChipButton active={feeling === "neutral"} onClick={() => setFeeling("neutral")}>
-              Neutral
-            </ChipButton>
-            <ChipButton active={feeling === "bad"} onClick={() => setFeeling("bad")}>
-              Bad
-            </ChipButton>
-          </div>
-        </div>
-
-        <button type="submit" disabled={isSavingDailyFactors || !supabaseConfigured}>
-          {isSavingDailyFactors ? "Saving..." : isLoadingDailyFactors ? "Loading..." : "Save day"}
-        </button>
-
-        {dailyStatus ? <p className="status">{dailyStatus}</p> : null}
-      </form>
-    </section>
-  );
-}
-
 export default function HomePage() {
   const supabaseConfigured = hasSupabaseConfig();
   const addMeasurementButtonRef = useRef<HTMLButtonElement>(null);
@@ -1014,6 +819,9 @@ export default function HomePage() {
   const [measuredPeriod, setMeasuredPeriod] = useState<BloodPressurePeriod>(() =>
     getDefaultBloodPressurePeriod(),
   );
+  const [dailySleptOrNapped, setDailySleptOrNapped] = useState(false);
+  const [dailyHadAlcohol, setDailyHadAlcohol] = useState(false);
+  const [dailyFeeling, setDailyFeeling] = useState<DailyFeeling>("neutral");
   const [status, setStatus] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [readings, setReadings] = useState<BloodPressureReading[]>([]);
@@ -1107,7 +915,7 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    const sectionIds: ShellSection[] = ["latest", "chart", "add", "history", "daily"];
+    const sectionIds: ShellSection[] = ["latest", "chart", "add", "history"];
     const observer = new IntersectionObserver(
       (entries) => {
         const visibleEntry = entries
@@ -1182,6 +990,72 @@ export default function HomePage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isAddModalMounted) {
+      return;
+    }
+
+    let isActive = true;
+
+    async function loadDailyFactorsForDay() {
+      const cacheKey = `${DAILY_FACTORS_CACHE_PREFIX}${measuredDay}`;
+      const cachedRow = readCachedJson<DailyFactorRow>(cacheKey);
+
+      if (cachedRow && isActive) {
+        setDailySleptOrNapped(cachedRow.slept_or_napped);
+        setDailyHadAlcohol(cachedRow.had_alcohol);
+        setDailyFeeling(cachedRow.feeling);
+      }
+
+      if (!supabaseConfigured) {
+        return;
+      }
+
+      try {
+        const supabase = createSupabaseBrowserClient();
+        if (!supabase) {
+          throw new Error("Supabase is not configured yet.");
+        }
+
+        const { data, error } = await supabase
+          .from("daily_factors")
+          .select("day, slept_or_napped, had_alcohol, feeling")
+          .eq("day", measuredDay)
+          .maybeSingle();
+
+        if (error) {
+          throw error;
+        }
+
+        if (!isActive) {
+          return;
+        }
+
+        if (data) {
+          const row = data as DailyFactorRow;
+          setDailySleptOrNapped(row.slept_or_napped);
+          setDailyHadAlcohol(row.had_alcohol);
+          setDailyFeeling(row.feeling);
+          writeCachedJson(cacheKey, row);
+        } else if (!cachedRow) {
+          setDailySleptOrNapped(false);
+          setDailyHadAlcohol(false);
+          setDailyFeeling("neutral");
+        }
+      } catch (error) {
+        if (isActive) {
+          setStatus(error instanceof Error ? error.message : "Unable to load daily factors.");
+        }
+      }
+    }
+
+    void loadDailyFactorsForDay();
+
+    return () => {
+      isActive = false;
+    };
+  }, [isAddModalMounted, measuredDay, supabaseConfigured]);
+
   function openAddModal() {
     if (addModalCloseTimer.current !== null) {
       window.clearTimeout(addModalCloseTimer.current);
@@ -1190,6 +1064,9 @@ export default function HomePage() {
 
     setMeasuredDay(toDateInputValue(new Date()));
     setMeasuredPeriod(getDefaultBloodPressurePeriod());
+    setDailySleptOrNapped(false);
+    setDailyHadAlcohol(false);
+    setDailyFeeling("neutral");
     setStatus(null);
     setIsAddModalMounted(true);
   }
@@ -1293,6 +1170,20 @@ export default function HomePage() {
         throw error;
       }
 
+      const { error: dailyError } = await supabase.from("daily_factors").upsert(
+        {
+          day: measuredDay,
+          slept_or_napped: dailySleptOrNapped,
+          had_alcohol: dailyHadAlcohol,
+          feeling: dailyFeeling,
+        },
+        { onConflict: "day" },
+      );
+
+      if (dailyError) {
+        throw dailyError;
+      }
+
       writeCachedJson(BLOOD_PRESSURE_CACHE_KEY, [
         {
           id: crypto.randomUUID(),
@@ -1302,11 +1193,20 @@ export default function HomePage() {
         },
         ...chronologicalReadings,
       ]);
-      setStatus("Reading saved.");
+      writeCachedJson(`${DAILY_FACTORS_CACHE_PREFIX}${measuredDay}`, {
+        day: measuredDay,
+        slept_or_napped: dailySleptOrNapped,
+        had_alcohol: dailyHadAlcohol,
+        feeling: dailyFeeling,
+      } satisfies DailyFactorRow);
+      setStatus("Measurement saved.");
       setSystolic("");
       setDiastolic("");
       setMeasuredDay(toDateInputValue(new Date()));
       setMeasuredPeriod(getDefaultBloodPressurePeriod());
+      setDailySleptOrNapped(false);
+      setDailyHadAlcohol(false);
+      setDailyFeeling("neutral");
       closeAddModal();
       await reloadReadings();
     } catch (error) {
@@ -1394,8 +1294,6 @@ export default function HomePage() {
         )}
       </details>
 
-      <DailyFactorsPanel supabaseConfigured={supabaseConfigured} />
-
       <div className="app-shell-spacer" aria-hidden="true" />
 
       <AppShellNav activeSection={activeSection} onSelect={setActiveSection} />
@@ -1413,6 +1311,12 @@ export default function HomePage() {
         setMeasuredDay={setMeasuredDay}
         measuredPeriod={measuredPeriod}
         setMeasuredPeriod={setMeasuredPeriod}
+        dailySleptOrNapped={dailySleptOrNapped}
+        setDailySleptOrNapped={setDailySleptOrNapped}
+        dailyHadAlcohol={dailyHadAlcohol}
+        setDailyHadAlcohol={setDailyHadAlcohol}
+        dailyFeeling={dailyFeeling}
+        setDailyFeeling={setDailyFeeling}
         onClose={closeAddModal}
         onSubmit={handleSubmit}
       />

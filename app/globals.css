@@ -829,6 +829,12 @@ button:focus-visible {
   min-width: 0;
 }
 
+.entry-modal-factors {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
 .segmented {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

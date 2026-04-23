@@ -548,9 +548,16 @@ function BloodPressureEntryModal({
   );
 }
 
-function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) {
+function BloodPressureChart({
+  readings,
+  timeRange,
+  onTimeRangeChange,
+}: {
+  readings: BloodPressureReading[];
+  timeRange: BloodPressureRange;
+  onTimeRangeChange: (range: BloodPressureRange) => void;
+}) {
   const chronological = getChronologicalReadings(readings);
-  const [timeRange, setTimeRange] = useState<BloodPressureRange>("all");
   const [selectedReadingId, setSelectedReadingId] = useState<string | null>(null);
   const rangeReadings = filterBloodPressureReadingsByRange(chronological, timeRange);
   const latestReading = rangeReadings[rangeReadings.length - 1] ?? null;
@@ -579,7 +586,7 @@ function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) 
       <div className="chart">
         <div className="chart-ranges" role="tablist" aria-label="Chart time range">
           {(["1d", "1w", "1m", "1y", "all"] as BloodPressureRange[]).map((range) => (
-            <ChipButton key={range} active={timeRange === range} onClick={() => setTimeRange(range)}>
+            <ChipButton key={range} active={timeRange === range} onClick={() => onTimeRangeChange(range)}>
               {getRangeLabel(range)}
             </ChipButton>
           ))}
@@ -635,7 +642,7 @@ function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) 
     <div className="chart">
       <div className="chart-ranges" role="tablist" aria-label="Chart time range">
         {(["1d", "1w", "1m", "1y", "all"] as BloodPressureRange[]).map((range) => (
-          <ChipButton key={range} active={timeRange === range} onClick={() => setTimeRange(range)}>
+          <ChipButton key={range} active={timeRange === range} onClick={() => onTimeRangeChange(range)}>
             {getRangeLabel(range)}
           </ChipButton>
         ))}
@@ -770,6 +777,7 @@ export default function HomePage() {
   const [dailySleptOrNapped, setDailySleptOrNapped] = useState(false);
   const [dailyHadAlcohol, setDailyHadAlcohol] = useState(false);
   const [dailyFeeling, setDailyFeeling] = useState<DailyFeeling>("neutral");
+  const [chartRange, setChartRange] = useState<BloodPressureRange>("all");
   const [status, setStatus] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [readings, setReadings] = useState<BloodPressureReading[]>([]);
@@ -779,8 +787,9 @@ export default function HomePage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const addModalCloseTimer = useRef<number | null>(null);
   const chronologicalReadings = getChronologicalReadings(readings);
-  const latestReading = chronologicalReadings[chronologicalReadings.length - 1] ?? null;
-  const averageReading = getAverageReading(chronologicalReadings);
+  const rangeReadings = filterBloodPressureReadingsByRange(chronologicalReadings, chartRange);
+  const latestReading = rangeReadings[rangeReadings.length - 1] ?? null;
+  const averageReading = getAverageReading(rangeReadings);
 
   useEffect(() => {
     let isActive = true;
@@ -1142,22 +1151,48 @@ export default function HomePage() {
       ) : null}
       <header className="page-hero" id="latest">
         <p className="eyebrow">Latest reading</p>
-        {latestReading ? (
-          <>
-            <p className="page-hero-value">
-              {formatReadingLabel(latestReading)} <span>mmHg</span>
-            </p>
-            {averageReading ? (
-              <p className="page-hero-note">Average {formatAverageLabel(averageReading)}</p>
-            ) : null}
-          </>
+        {latestReading && averageReading ? (
+          <div className="page-hero-stats" aria-label="Latest and average blood pressure">
+            <div className="hero-stat">
+              <span className="hero-stat-label">Latest</span>
+              <strong className="hero-stat-value">{formatReadingLabel(latestReading)}</strong>
+              <span className="hero-stat-unit">mmHg</span>
+            </div>
+
+            <div className="hero-stat">
+              <span className="hero-stat-label">Average</span>
+              <strong className="hero-stat-value">{formatAverageLabel(averageReading)}</strong>
+              <span className="hero-stat-unit">mmHg</span>
+            </div>
+          </div>
+        ) : latestReading ? (
+          <div className="page-hero-stats" aria-label="Latest blood pressure">
+            <div className="hero-stat">
+              <span className="hero-stat-label">Latest</span>
+              <strong className="hero-stat-value">{formatReadingLabel(latestReading)}</strong>
+              <span className="hero-stat-unit">mmHg</span>
+            </div>
+            <div className="hero-stat hero-stat-empty">
+              <span className="hero-stat-label">Average</span>
+              <strong className="hero-stat-value">--/--</strong>
+              <span className="hero-stat-unit">mmHg</span>
+            </div>
+          </div>
         ) : (
           <p className="page-hero-note">No readings yet.</p>
         )}
       </header>
 
       <section className="page-section" id="chart">
-        {isLoading ? <p className="status">Loading chart...</p> : <BloodPressureChart readings={readings} />}
+        {isLoading ? (
+          <p className="status">Loading chart...</p>
+        ) : (
+          <BloodPressureChart
+            readings={readings}
+            timeRange={chartRange}
+            onTimeRangeChange={setChartRange}
+          />
+        )}
       </section>
 
       <section className="page-section" id="add">

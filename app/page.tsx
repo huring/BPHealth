@@ -1063,6 +1063,9 @@ export default function HomePage() {
               <span className="bp-diastolic">{latestDiastolic}</span>
             </strong>
             <span className="hero-stat-unit">mmHg</span>
+            <span className="hero-stat-footnote">
+              {latestReading ? formatReadingTime(latestReading.measured_at) : "No latest reading"}
+            </span>
           </div>
 
           <div className={`hero-stat${averageReading ? "" : " hero-stat-placeholder"}`}>

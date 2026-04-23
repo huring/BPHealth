@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
-import { ServiceWorkerRegister } from "./service-worker-register";
+import { ServiceWorkerCleanup } from "./sw-cleanup";
 
 export const metadata: Metadata = {
   title: "BPHealth",
@@ -46,7 +46,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <ServiceWorkerRegister />
+        <ServiceWorkerCleanup />
         {children}
       </body>
     </html>

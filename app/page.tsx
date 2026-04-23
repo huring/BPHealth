@@ -43,9 +43,6 @@ type AverageReading = {
 
 type BloodPressureRange = "1d" | "1w" | "1m" | "1y" | "all";
 
-const BLOOD_PRESSURE_CACHE_KEY = "bphealth.blood-pressure-readings.v1";
-const DAILY_FACTORS_CACHE_PREFIX = "bphealth.daily-factors.v1.";
-
 function toDateInputValue(date: Date) {
   const offsetMs = date.getTimezoneOffset() * 60_000;
   const localTime = new Date(date.getTime() - offsetMs);
@@ -201,31 +198,6 @@ function getAverageReading(readings: BloodPressureReading[]) {
     systolic: Math.round(totalSystolic / readings.length),
     diastolic: Math.round(totalDiastolic / readings.length),
   } satisfies AverageReading;
-}
-
-function readCachedJson<T>(key: string): T | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  const rawValue = window.localStorage.getItem(key);
-  if (!rawValue) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(rawValue) as T;
-  } catch {
-    return null;
-  }
-}
-
-function writeCachedJson(key: string, value: unknown) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(key, JSON.stringify(value));
 }
 
 function getChartAxisTickIndexes(length: number, maxTicks = 5) {
@@ -781,7 +753,6 @@ export default function HomePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [readings, setReadings] = useState<BloodPressureReading[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isOnline, setIsOnline] = useState(true);
   const [isAddModalMounted, setIsAddModalMounted] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const addModalCloseTimer = useRef<number | null>(null);
@@ -826,7 +797,6 @@ export default function HomePage() {
 
         if (isActive) {
           setReadings((data ?? []) as BloodPressureReading[]);
-          writeCachedJson(BLOOD_PRESSURE_CACHE_KEY, data ?? []);
         }
       } catch (error) {
         if (isActive) {
@@ -845,36 +815,6 @@ export default function HomePage() {
       isActive = false;
     };
   }, [supabaseConfigured]);
-
-  useEffect(() => {
-    setIsOnline(navigator.onLine);
-
-    function handleOnline() {
-      setIsOnline(true);
-      setStatus((current) => current ?? "Back online.");
-    }
-
-    function handleOffline() {
-      setIsOnline(false);
-      setStatus("You're offline. Showing cached data.");
-    }
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, []);
-
-  useEffect(() => {
-    const cachedReadings = readCachedJson<BloodPressureReading[]>(BLOOD_PRESSURE_CACHE_KEY);
-    if (cachedReadings && cachedReadings.length > 0) {
-      setReadings(cachedReadings);
-      setIsLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
     if (!isAddModalMounted) {
@@ -929,15 +869,6 @@ export default function HomePage() {
     let isActive = true;
 
     async function loadDailyFactorsForDay() {
-      const cacheKey = `${DAILY_FACTORS_CACHE_PREFIX}${measuredDay}`;
-      const cachedRow = readCachedJson<DailyFactorRow>(cacheKey);
-
-      if (cachedRow && isActive) {
-        setDailySleptOrNapped(cachedRow.slept_or_napped);
-        setDailyHadAlcohol(cachedRow.had_alcohol);
-        setDailyFeeling(cachedRow.feeling);
-      }
-
       if (!supabaseConfigured) {
         return;
       }
@@ -967,8 +898,7 @@ export default function HomePage() {
           setDailySleptOrNapped(row.slept_or_napped);
           setDailyHadAlcohol(row.had_alcohol);
           setDailyFeeling(row.feeling);
-          writeCachedJson(cacheKey, row);
-        } else if (!cachedRow) {
+        } else {
           setDailySleptOrNapped(false);
           setDailyHadAlcohol(false);
           setDailyFeeling("neutral");
@@ -1030,17 +960,11 @@ export default function HomePage() {
     }
 
     setReadings((data ?? []) as BloodPressureReading[]);
-    writeCachedJson(BLOOD_PRESSURE_CACHE_KEY, data ?? []);
   }
 
   async function handleDelete(reading: BloodPressureReading) {
     if (!supabaseConfigured) {
       setStatus("Supabase is not configured yet. Add the env vars to delete readings.");
-      return;
-    }
-
-    if (!isOnline) {
-      setStatus("You're offline. Delete actions need a connection.");
       return;
     }
 
@@ -1078,11 +1002,6 @@ export default function HomePage() {
       return;
     }
 
-    if (!isOnline) {
-      setStatus("You're offline. Reading saves need a connection.");
-      return;
-    }
-
     setIsSaving(true);
     setStatus(null);
 
@@ -1114,22 +1033,6 @@ export default function HomePage() {
       if (dailyError) {
         throw dailyError;
       }
-
-      writeCachedJson(BLOOD_PRESSURE_CACHE_KEY, [
-        {
-          id: crypto.randomUUID(),
-          systolic: Number(systolic),
-          diastolic: Number(diastolic),
-          measured_at: getBloodPressureMeasuredAt(measuredDay, measuredPeriod),
-        },
-        ...chronologicalReadings,
-      ]);
-      writeCachedJson(`${DAILY_FACTORS_CACHE_PREFIX}${measuredDay}`, {
-        day: measuredDay,
-        slept_or_napped: dailySleptOrNapped,
-        had_alcohol: dailyHadAlcohol,
-        feeling: dailyFeeling,
-      } satisfies DailyFactorRow);
       setStatus("Measurement saved.");
       setSystolic("");
       setDiastolic("");
@@ -1150,11 +1053,6 @@ export default function HomePage() {
   return (
     <main className="shell app-shell">
       <InstallPrompt />
-      {!isOnline ? (
-        <p className="install-banner" role="status">
-          Offline mode: cached data is available, but saving needs a connection.
-        </p>
-      ) : null}
       <header className="page-hero" id="latest">
         <div className="page-hero-stats" aria-label="Latest and average blood pressure">
           <div className={`hero-stat${latestReading ? "" : " hero-stat-placeholder"}`}>

@@ -757,6 +757,7 @@ function BloodPressureChart({
 export default function HomePage() {
   const supabaseConfigured = hasSupabaseConfig();
   const addMeasurementButtonRef = useRef<HTMLButtonElement>(null);
+  const [isMounted, setIsMounted] = useState(false);
   const [systolic, setSystolic] = useState("");
   const [diastolic, setDiastolic] = useState("");
   const [measuredDay, setMeasuredDay] = useState(() => toDateInputValue(new Date()));
@@ -779,6 +780,10 @@ export default function HomePage() {
   const rangeReadings = filterBloodPressureReadingsByRange(chronologicalReadings, chartRange);
   const latestReading = rangeReadings[rangeReadings.length - 1] ?? null;
   const averageReading = getAverageReading(rangeReadings);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     let isActive = true;
@@ -1139,7 +1144,29 @@ export default function HomePage() {
         </p>
       ) : null}
       <header className="page-hero" id="latest">
-        {latestReading && averageReading ? (
+        {!isMounted ? (
+          <div className="page-hero-stats" aria-label="Latest and average blood pressure">
+            <div className="hero-stat hero-stat-placeholder">
+              <span className="hero-stat-label">Latest</span>
+              <strong className="hero-stat-value">
+                <span className="bp-systolic">--</span>
+                <span className="bp-separator">/</span>
+                <span className="bp-diastolic">--</span>
+              </strong>
+              <span className="hero-stat-unit">mmHg</span>
+            </div>
+
+            <div className="hero-stat hero-stat-placeholder">
+              <span className="hero-stat-label">Average</span>
+              <strong className="hero-stat-value">
+                <span className="bp-systolic">--</span>
+                <span className="bp-separator">/</span>
+                <span className="bp-diastolic">--</span>
+              </strong>
+              <span className="hero-stat-unit">mmHg</span>
+            </div>
+          </div>
+        ) : latestReading && averageReading ? (
           <div className="page-hero-stats" aria-label="Latest and average blood pressure">
             <div className="hero-stat">
               <span className="hero-stat-label">Latest</span>

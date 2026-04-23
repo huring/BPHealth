@@ -658,6 +658,10 @@ button:focus-visible {
   opacity: 0.78;
 }
 
+.hero-stat-placeholder {
+  opacity: 0.72;
+}
+
 .hero-stat-label {
   font-size: 0.74rem;
   text-transform: uppercase;

@@ -595,7 +595,7 @@ function BloodPressureChart({
         return current;
       }
 
-      return latestReading?.id ?? rangeReadings[rangeReadings.length - 1].id;
+      return null;
     });
   }, [rangeReadings, latestReading?.id]);
 
@@ -652,8 +652,7 @@ function BloodPressureChart({
   );
   const yTicks = [maxValue, (maxValue + minValue) / 2, minValue];
   const axisTickIndexes = getChartAxisTickIndexes(rangeReadings.length);
-  const selectedReading =
-    rangeReadings.find((reading) => reading.id === selectedReadingId) ?? latestReading;
+  const selectedReading = rangeReadings.find((reading) => reading.id === selectedReadingId) ?? null;
 
   function handleReadingSelect(readingId: string) {
     setSelectedReadingId(readingId);
@@ -734,12 +733,10 @@ function BloodPressureChart({
             const bodyY = (topY + bottomY) / 2 - bodyHeight / 2;
             const bodyX = systolicPoint.x - 7;
             const isSelected = reading.id === selectedReadingId;
+            const rangeState = selectedReadingId ? (isSelected ? "chart-selected" : "chart-dimmed") : "";
 
             return (
-              <g
-                key={`range-${reading.id}`}
-                className={isSelected ? "chart-selected" : "chart-dimmed"}
-              >
+              <g key={`range-${reading.id}`} className={rangeState}>
                 <rect
                   className="chart-range-body"
                   x={bodyX}

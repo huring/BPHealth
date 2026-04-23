@@ -1,10 +1,11 @@
 # Card 02: Selection and Interaction
 
 ## Objective
-Update the current selection behavior - by default, nothing should be selected, and all the bars should be highlighted
+Update the current selection behavior so nothing is selected by default and all bars stay highlighted until the user selects one.
 
 ## Scope
-- Update selection behaviour, nothing should be selected by default
+- Keep the default state unselected
+- Keep all bars highlighted until one is selected
 - Tap a range bar or endpoint to select a reading
 - Highlight the selected bar and endpoints
 - Dim unselected readings slightly

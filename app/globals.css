@@ -45,7 +45,7 @@ input,
 select,
 summary,
 .chart-range-point,
-.app-nav-link {
+.segmented-option {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
@@ -883,57 +883,6 @@ button:focus-visible {
 
 .entry-modal .status {
   color: var(--muted);
-}
-
-.app-shell-spacer {
-  height: 74px;
-}
-
-.app-nav {
-  position: fixed;
-  left: 50%;
-  bottom: calc(10px + env(safe-area-inset-bottom));
-  transform: translateX(-50%);
-  width: min(100% - 20px, 480px);
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
-  padding: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 18px;
-  background: rgba(8, 12, 18, 0.86);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.34);
-  z-index: 20;
-}
-
-.app-nav-link {
-  justify-self: stretch;
-  min-width: 0;
-  min-height: 44px;
-  padding: 12px 10px;
-  border-radius: 12px;
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  text-align: center;
-  transition:
-    transform 120ms ease,
-    background-color 120ms ease,
-    color 120ms ease,
-    opacity 120ms ease;
-}
-
-.app-nav-link-active {
-  background: rgba(142, 178, 232, 0.16);
-  color: var(--ink);
-}
-
-.app-nav-link:active {
-  transform: translateY(1px) scale(0.98);
 }
 
 .app-loading {

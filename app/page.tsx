@@ -313,58 +313,6 @@ function ChipButton({
   );
 }
 
-type ShellSection = "latest" | "chart" | "add" | "history";
-
-function getShellSectionLabel(section: ShellSection) {
-  if (section === "latest") {
-    return "Latest";
-  }
-
-  if (section === "chart") {
-    return "Chart";
-  }
-
-  if (section === "add") {
-    return "Add";
-  }
-
-  if (section === "history") {
-    return "History";
-  }
-}
-
-function AppShellNav({
-  activeSection,
-  onSelect,
-}: {
-  activeSection: ShellSection;
-  onSelect: (section: ShellSection) => void;
-}) {
-  const sections: ShellSection[] = ["latest", "chart", "add", "history"];
-
-  function scrollToSection(section: ShellSection) {
-    onSelect(section);
-    const element = document.getElementById(section);
-    element?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
-  return (
-    <nav className="app-nav" aria-label="Primary">
-      {sections.map((section) => (
-        <button
-          key={section}
-          className={`app-nav-link${activeSection === section ? " app-nav-link-active" : ""}`}
-          type="button"
-          aria-pressed={activeSection === section}
-          onClick={() => scrollToSection(section)}
-        >
-          {getShellSectionLabel(section)}
-        </button>
-      ))}
-    </nav>
-  );
-}
-
 function BloodPressureEntryModal({
   isMounted,
   isOpen,
@@ -826,7 +774,6 @@ export default function HomePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [readings, setReadings] = useState<BloodPressureReading[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState<ShellSection>("latest");
   const [isOnline, setIsOnline] = useState(true);
   const [isAddModalMounted, setIsAddModalMounted] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -912,37 +859,6 @@ export default function HomePage() {
       setIsLoading(false);
       setStatus("Showing cached readings while syncing.");
     }
-  }, []);
-
-  useEffect(() => {
-    const sectionIds: ShellSection[] = ["latest", "chart", "add", "history"];
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visibleEntry = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((left, right) => right.intersectionRatio - left.intersectionRatio)[0];
-
-        if (visibleEntry?.target instanceof HTMLElement) {
-          setActiveSection(visibleEntry.target.id as ShellSection);
-        }
-      },
-      {
-        root: null,
-        threshold: [0.25, 0.5, 0.75],
-        rootMargin: "-10% 0px -55% 0px",
-      },
-    );
-
-    sectionIds.forEach((sectionId) => {
-      const element = document.getElementById(sectionId);
-      if (element) {
-        observer.observe(element);
-      }
-    });
-
-    return () => {
-      observer.disconnect();
-    };
   }, []);
 
   useEffect(() => {
@@ -1294,9 +1210,6 @@ export default function HomePage() {
         )}
       </details>
 
-      <div className="app-shell-spacer" aria-hidden="true" />
-
-      <AppShellNav activeSection={activeSection} onSelect={setActiveSection} />
       <BloodPressureEntryModal
         isMounted={isAddModalMounted}
         isOpen={isAddModalOpen}

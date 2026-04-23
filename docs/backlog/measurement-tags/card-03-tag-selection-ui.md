@@ -1,5 +1,7 @@
 # Card 03: Tag Selection UI
 
+Status: done
+
 ## Objective
 Design a mobile-first UI for selecting and adding tags.
 

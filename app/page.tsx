@@ -325,15 +325,17 @@ function filterBloodPressureReadingsByRange(readings: BloodPressureReading[], ra
 function ChipButton({
   active,
   children,
+  className,
   onClick,
 }: {
   active?: boolean;
   children: ReactNode;
+  className?: string;
   onClick: () => void;
 }) {
   return (
     <button
-      className={`chip${active ? " chip-active" : ""}`}
+      className={`chip${className ? ` ${className}` : ""}${active ? " chip-active" : ""}`}
       type="button"
       aria-pressed={Boolean(active)}
       onClick={onClick}
@@ -358,10 +360,12 @@ function BloodPressureEntryModal({
   measuredPeriod,
   setMeasuredPeriod,
   measurementTags,
+  selectedTagIds,
   tagDraft,
   setTagDraft,
   tagStatus,
   onCreateTag,
+  onToggleTag,
   dailySleptOrNapped,
   setDailySleptOrNapped,
   dailyHadAlcohol,
@@ -385,10 +389,12 @@ function BloodPressureEntryModal({
   measuredPeriod: BloodPressurePeriod;
   setMeasuredPeriod: (value: BloodPressurePeriod) => void;
   measurementTags: MeasurementTagRow[];
+  selectedTagIds: string[];
   tagDraft: string;
   setTagDraft: (value: string) => void;
   tagStatus: string | null;
   onCreateTag: () => void;
+  onToggleTag: (tagId: string) => void;
   dailySleptOrNapped: boolean;
   setDailySleptOrNapped: Dispatch<SetStateAction<boolean>>;
   dailyHadAlcohol: boolean;
@@ -402,6 +408,7 @@ function BloodPressureEntryModal({
   const diastolicInputRef = useRef<HTMLInputElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
+  const selectedTags = measurementTags.filter((tag) => selectedTagIds.includes(tag.id));
 
   useEffect(() => {
     if (!isOpen) {
@@ -546,7 +553,12 @@ function BloodPressureEntryModal({
             </div>
 
             <div className="chip-stack" aria-label="Measurement tags">
-              <span className="field-label">Tags</span>
+              <div className="tag-header-row">
+                <span className="field-label">Tags</span>
+                <span className="tag-count">{selectedTags.length} selected</span>
+              </div>
+              <p className="tag-help">Tap chips to select tags for this measurement. Add a new one if needed.</p>
+
               <div className="tag-entry-row">
                 <input
                   ref={tagInputRef}
@@ -575,23 +587,42 @@ function BloodPressureEntryModal({
                 </button>
               </div>
               {tagStatus ? <p className="status tag-status">{tagStatus}</p> : null}
-              <div className="chip-row">
-                {measurementTags.length === 0 ? (
-                  <p className="status tag-empty">No tags yet. Add one to get started.</p>
-                ) : (
-                  measurementTags.map((tag) => (
-                    <ChipButton
-                      key={tag.id}
-                      active={normalizeMeasurementTagName(tagDraft).toLowerCase() === normalizeMeasurementTagName(tag.name).toLowerCase()}
-                      onClick={() => {
-                        setTagDraft(tag.name);
-                        tagInputRef.current?.focus();
-                      }}
-                    >
-                      {tag.name}
-                    </ChipButton>
-                  ))
-                )}
+              {selectedTags.length > 0 ? (
+                <div className="tag-group">
+                  <span className="tag-section-label">Selected</span>
+                  <div className="chip-row tag-chip-cloud">
+                    {selectedTags.map((tag) => (
+                      <ChipButton
+                        key={tag.id}
+                        active
+                        className="chip-tag"
+                        onClick={() => onToggleTag(tag.id)}
+                      >
+                        {tag.name}
+                      </ChipButton>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="tag-group">
+                <span className="tag-section-label">All tags</span>
+                <div className="chip-row tag-chip-cloud">
+                  {measurementTags.length === 0 ? (
+                    <p className="status tag-empty">No tags yet. Add one to get started.</p>
+                  ) : (
+                    measurementTags.map((tag) => (
+                      <ChipButton
+                        key={tag.id}
+                        active={selectedTagIds.includes(tag.id)}
+                        className="chip-tag"
+                        onClick={() => onToggleTag(tag.id)}
+                      >
+                        {tag.name}
+                      </ChipButton>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
 
@@ -913,6 +944,7 @@ export default function HomePage() {
   const [dailyHadAlcohol, setDailyHadAlcohol] = useState(false);
   const [dailyFeeling, setDailyFeeling] = useState<DailyFeeling>("neutral");
   const [measurementTags, setMeasurementTags] = useState<MeasurementTagRow[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
   const [tagStatus, setTagStatus] = useState<string | null>(null);
   const [chartRange, setChartRange] = useState<BloodPressureRange>("all");
@@ -1114,6 +1146,7 @@ export default function HomePage() {
     setDailySleptOrNapped(false);
     setDailyHadAlcohol(false);
     setDailyFeeling("neutral");
+    setSelectedTagIds([]);
     setTagDraft("");
     setTagStatus(null);
     setStatus(null);
@@ -1199,17 +1232,32 @@ export default function HomePage() {
         throw new Error("Supabase is not configured yet.");
       }
 
-      const { error } = await supabase.from("measurement_tags").insert({ name: normalizedName });
+      const { data, error } = await supabase
+        .from("measurement_tags")
+        .insert({ name: normalizedName })
+        .select("id, name, created_at")
+        .single();
       if (error) {
         throw error;
       }
 
       await reloadReadings();
+      if (data) {
+        setSelectedTagIds((current) =>
+          current.includes(data.id) ? current : [...current, data.id],
+        );
+      }
       setTagDraft("");
       setTagStatus("Tag saved.");
     } catch (error) {
       setTagStatus(error instanceof Error ? error.message : "Unable to save tag.");
     }
+  }
+
+  function handleToggleMeasurementTag(tagId: string) {
+    setSelectedTagIds((current) =>
+      current.includes(tagId) ? current.filter((currentTagId) => currentTagId !== tagId) : [...current, tagId],
+    );
   }
 
   async function handleDelete(reading: BloodPressureReading) {
@@ -1436,10 +1484,12 @@ export default function HomePage() {
         measuredPeriod={measuredPeriod}
         setMeasuredPeriod={setMeasuredPeriod}
         measurementTags={measurementTags}
+        selectedTagIds={selectedTagIds}
         tagDraft={tagDraft}
         setTagDraft={setTagDraft}
         tagStatus={tagStatus}
         onCreateTag={() => void handleCreateMeasurementTag()}
+        onToggleTag={handleToggleMeasurementTag}
         dailySleptOrNapped={dailySleptOrNapped}
         setDailySleptOrNapped={setDailySleptOrNapped}
         dailyHadAlcohol={dailyHadAlcohol}

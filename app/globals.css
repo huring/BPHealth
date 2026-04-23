@@ -268,11 +268,42 @@ button:focus-visible {
   gap: 8px;
 }
 
+.tag-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.tag-count {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.tag-help {
+  margin: -2px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
 .tag-entry-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
+}
+
+.tag-group {
+  display: grid;
+  gap: 8px;
+}
+
+.tag-section-label {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
 }
 
 .tag-input {
@@ -328,6 +359,22 @@ button:focus-visible {
 .tag-empty,
 .tag-status {
   margin-top: -2px;
+}
+
+.tag-chip-cloud {
+  gap: 6px;
+}
+
+.chip-tag {
+  min-height: 38px;
+  padding: 9px 12px;
+  font-size: 0.92rem;
+}
+
+.chip-tag.chip-active {
+  background: rgba(124, 169, 224, 0.2);
+  color: var(--ink);
+  border-color: rgba(124, 169, 224, 0.28);
 }
 
 .chip {
@@ -1185,6 +1232,12 @@ button:focus-visible {
 
   .tag-add-button {
     width: 100%;
+  }
+
+  .tag-header-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
   }
 
   .chart-axis-label {

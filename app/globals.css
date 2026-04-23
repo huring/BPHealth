@@ -48,12 +48,17 @@ a {
 }
 
 .hero,
+.app-bar,
 .panel {
   border: 1px solid var(--line);
   border-radius: 24px;
   background: var(--card);
   backdrop-filter: blur(10px);
   box-shadow: var(--shadow);
+}
+
+.app-bar {
+  padding: 16px 18px 14px;
 }
 
 .hero {
@@ -91,6 +96,14 @@ h1 {
   color: var(--muted);
 }
 
+.app-bar-copy {
+  margin: 10px 0 0;
+  max-width: 32ch;
+  font-size: 0.98rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
 h2 {
   margin: 0 0 14px;
   font-size: 1.1rem;
@@ -109,7 +122,7 @@ h2 {
   padding: 12px 10px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.68);
+  background: rgba(255, 255, 255, 0.55);
   text-decoration: none;
   font-weight: 700;
   color: var(--ink);
@@ -282,6 +295,48 @@ button:disabled {
   background: rgba(23, 32, 39, 0.08);
   font-size: 0.92rem;
   color: var(--muted);
+}
+
+.panel-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.panel-heading h2 {
+  margin-bottom: 8px;
+}
+
+.panel-lede-tight {
+  margin: 0;
+  max-width: 28ch;
+}
+
+.summary-chip {
+  flex: 0 0 auto;
+  display: grid;
+  gap: 2px;
+  justify-items: end;
+  text-align: right;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--muted);
+  min-width: 96px;
+}
+
+.summary-chip span {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.summary-chip strong {
+  font-size: 1.05rem;
+  color: var(--ink);
 }
 
 .history-copy {
@@ -489,5 +544,14 @@ button:disabled {
 
   .history-item {
     flex-direction: column;
+  }
+
+  .panel-heading {
+    flex-direction: column;
+  }
+
+  .summary-chip {
+    justify-items: start;
+    text-align: left;
   }
 }

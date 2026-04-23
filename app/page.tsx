@@ -415,6 +415,7 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const canSubmit = systolic.trim() !== "" && diastolic.trim() !== "" && measuredAt.trim() !== "";
+  const latestReading = readings[0] ?? null;
 
   useEffect(() => {
     let isActive = true;
@@ -552,12 +553,10 @@ export default function HomePage() {
 
   return (
     <main className="shell app-shell">
-      <header className="hero app-header">
+      <header className="app-bar app-header">
         <p className="eyebrow">BPHealth</p>
-        <h1>Today at a glance.</h1>
-        <p className="lede">
-          Mobile-first tracking for blood pressure and daily factors, with the most
-          important actions always within thumb reach.
+        <p className="app-bar-copy">
+          Blood pressure first. The chart stays on top, with quick daily input below.
         </p>
       </header>
 
@@ -568,12 +567,29 @@ export default function HomePage() {
       </nav>
 
       <section className="panel" id="chart">
-        <h2>Chart</h2>
+        <div className="panel-heading">
+          <div>
+            <h2>Blood pressure</h2>
+            <p className="panel-lede panel-lede-tight">
+              The main view stays focused on the trend over time.
+            </p>
+          </div>
+          <div className="summary-chip" aria-live="polite">
+            {latestReading ? (
+              <>
+                <span>Latest</span>
+                <strong>{formatReadingLabel(latestReading)}</strong>
+              </>
+            ) : (
+              <span>No readings yet</span>
+            )}
+          </div>
+        </div>
         {isLoading ? <p className="status">Loading chart...</p> : <BloodPressureChart readings={readings} />}
       </section>
 
       <section className="panel">
-        <h2>New reading</h2>
+        <h2>Add reading</h2>
         {!supabaseConfigured ? (
           <p className="status">
             Supabase environment variables are missing. Add `NEXT_PUBLIC_SUPABASE_URL`
@@ -652,7 +668,7 @@ export default function HomePage() {
 
       <details className="panel history-panel" id="history">
         <summary>
-          <span>History</span>
+          <span>Recent readings</span>
           <span className="history-count">{readings.length}</span>
         </summary>
         {isLoading ? (

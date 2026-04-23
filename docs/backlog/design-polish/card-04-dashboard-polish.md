@@ -17,7 +17,10 @@ Improve the overall dashboard experience.
 - The most important actions are easy to reach
 - The main blood pressure view remains the primary focus
 
+## Status
+
+- Done
+
 ## Notes
 
 - Keep the dashboard focused on the core daily workflow
-

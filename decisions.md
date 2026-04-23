@@ -28,6 +28,6 @@
 - [x] Card 01: Mobile First Layout
 - [x] Card 02: Input UX Reduction
 - [ ] Card 03: Visual Style Dark Mode
-- [ ] Card 04: Dashboard Polish
+- [x] Card 04: Dashboard Polish
 
 Update this list when a card is implemented and committed.

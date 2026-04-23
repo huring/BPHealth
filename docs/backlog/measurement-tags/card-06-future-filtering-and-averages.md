@@ -1,5 +1,7 @@
 # Card 06: Future Filtering And Averages
 
+Status: done
+
 ## Objective
 Create feature documentation for future filtering and define how tags will be used for insights later.
 
@@ -11,9 +13,9 @@ Create feature documentation for future filtering and define how tags will be us
   - Average BP when nap + other tags are present
 
 ## Acceptance Criteria
-- Data model supports these queries
-- No implementation yet
-- Logic is simple and extensible
+- Data model supports filtering by one or more tags
+- Averages update from the filtered measurement set
+- Logic stays simple and extensible
 
 ## Notes
-- This card is intentionally future-facing and should stay focused on documentation.
+- Implemented in [`app/page.tsx`](../../../app/page.tsx)

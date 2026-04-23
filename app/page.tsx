@@ -33,15 +33,7 @@ type MeasurementTagAssignmentRow = {
   created_at: string;
 };
 
-type DailyFeeling = "good_productive" | "neutral" | "bad";
 type BloodPressurePeriod = "morning" | "lunch" | "evening";
-
-type DailyFactorRow = {
-  day: string;
-  slept_or_napped: boolean;
-  had_alcohol: boolean;
-  feeling: DailyFeeling;
-};
 
 type ChartPoint = {
   x: number;
@@ -131,18 +123,6 @@ function formatReadingLabel(reading: BloodPressureReading) {
   return `${reading.systolic}/${reading.diastolic}`;
 }
 
-function formatHistoryFeeling(feeling: DailyFeeling) {
-  if (feeling === "good_productive") {
-    return "feeling good";
-  }
-
-  if (feeling === "neutral") {
-    return "feeling neutral";
-  }
-
-  return "feeling bad";
-}
-
 function normalizeMeasurementTagName(name: string) {
   return name.trim().replace(/\s+/g, " ");
 }
@@ -157,6 +137,32 @@ function getAutomaticMeasurementTagName(period: BloodPressurePeriod) {
 
 function isAutomaticMeasurementTagName(name: string) {
   return AUTOMATIC_MEASUREMENT_TAG_NAMES.includes(normalizeMeasurementTagName(name).toLowerCase() as (typeof AUTOMATIC_MEASUREMENT_TAG_NAMES)[number]);
+}
+
+function filterReadingsByTags(
+  readings: BloodPressureReading[],
+  selectedTagIds: string[],
+  tagIdsByReadingId: Record<string, string[]>,
+) {
+  if (selectedTagIds.length === 0) {
+    return readings;
+  }
+
+  return readings.filter((reading) => {
+    const readingTagIds = tagIdsByReadingId[reading.id] ?? [];
+    return selectedTagIds.every((tagId) => readingTagIds.includes(tagId));
+  });
+}
+
+function getVisibleMeasurementTags(measurementTags: MeasurementTagRow[]) {
+  return measurementTags.filter((tag) => !isAutomaticMeasurementTagName(tag.name));
+}
+
+function getMeasurementTagCountsById(assignments: MeasurementTagAssignmentRow[]) {
+  return assignments.reduce<Record<string, number>>((counts, assignment) => {
+    counts[assignment.tag_id] = (counts[assignment.tag_id] ?? 0) + 1;
+    return counts;
+  }, {});
 }
 
 function getLocalDayStart(date: Date) {
@@ -364,18 +370,13 @@ function BloodPressureEntryModal({
   measuredDay,
   setMeasuredDay,
   measurementTags,
+  measurementTagCountsById,
   selectedTagIds,
   tagDraft,
   setTagDraft,
   tagStatus,
   onCreateTag,
   onToggleTag,
-  dailySleptOrNapped,
-  setDailySleptOrNapped,
-  dailyHadAlcohol,
-  setDailyHadAlcohol,
-  dailyFeeling,
-  setDailyFeeling,
   onClose,
   onSubmit,
 }: {
@@ -391,18 +392,13 @@ function BloodPressureEntryModal({
   measuredDay: string;
   setMeasuredDay: (value: string) => void;
   measurementTags: MeasurementTagRow[];
+  measurementTagCountsById: Record<string, number>;
   selectedTagIds: string[];
   tagDraft: string;
   setTagDraft: (value: string) => void;
   tagStatus: string | null;
   onCreateTag: () => void;
   onToggleTag: (tagId: string) => void;
-  dailySleptOrNapped: boolean;
-  setDailySleptOrNapped: Dispatch<SetStateAction<boolean>>;
-  dailyHadAlcohol: boolean;
-  setDailyHadAlcohol: Dispatch<SetStateAction<boolean>>;
-  dailyFeeling: DailyFeeling;
-  setDailyFeeling: Dispatch<SetStateAction<DailyFeeling>>;
   onClose: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
@@ -620,7 +616,8 @@ function BloodPressureEntryModal({
                         className="chip-tag"
                         onClick={() => onToggleTag(tag.id)}
                       >
-                        {tag.name}
+                        <span className="chip-label">{tag.name}</span>
+                        <span className="chip-count-badge">{measurementTagCountsById[tag.id] ?? 0}</span>
                       </ChipButton>
                     ))}
                   </div>
@@ -640,7 +637,8 @@ function BloodPressureEntryModal({
                         className="chip-tag"
                         onClick={() => onToggleTag(tag.id)}
                       >
-                        {tag.name}
+                        <span className="chip-label">{tag.name}</span>
+                        <span className="chip-count-badge">{measurementTagCountsById[tag.id] ?? 0}</span>
                       </ChipButton>
                     ))
                   )}
@@ -648,36 +646,6 @@ function BloodPressureEntryModal({
               </div>
             </div>
 
-            <div className="entry-modal-factors" aria-label="Daily factors">
-              <div className="chip-row">
-                <ChipButton
-                  active={dailySleptOrNapped}
-                  onClick={() => setDailySleptOrNapped((current) => !current)}
-                >
-                  Slept / nap
-                </ChipButton>
-                <ChipButton
-                  active={dailyHadAlcohol}
-                  onClick={() => setDailyHadAlcohol((current) => !current)}
-                >
-                  Alcohol
-                </ChipButton>
-              </div>
-
-              <div className="segmented" role="radiogroup" aria-label="Feeling">
-                {(["good_productive", "neutral", "bad"] as DailyFeeling[]).map((feeling) => (
-                  <button
-                    key={feeling}
-                    aria-pressed={dailyFeeling === feeling}
-                    className={`segmented-option${dailyFeeling === feeling ? " segmented-option-active" : ""}`}
-                    type="button"
-                    onClick={() => setDailyFeeling(feeling)}
-                  >
-                    {feeling === "good_productive" ? "Good" : feeling === "neutral" ? "Neutral" : "Bad"}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
 
           <footer className="entry-modal-footer">
@@ -959,49 +927,59 @@ export default function HomePage() {
   const [systolic, setSystolic] = useState("");
   const [diastolic, setDiastolic] = useState("");
   const [measuredDay, setMeasuredDay] = useState(() => toDateInputValue(new Date()));
-  const [dailySleptOrNapped, setDailySleptOrNapped] = useState(false);
-  const [dailyHadAlcohol, setDailyHadAlcohol] = useState(false);
-  const [dailyFeeling, setDailyFeeling] = useState<DailyFeeling>("neutral");
   const [measurementTags, setMeasurementTags] = useState<MeasurementTagRow[]>([]);
   const [measurementTagAssignments, setMeasurementTagAssignments] = useState<MeasurementTagAssignmentRow[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [selectedFilterTagIds, setSelectedFilterTagIds] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
   const [tagStatus, setTagStatus] = useState<string | null>(null);
   const [chartRange, setChartRange] = useState<BloodPressureRange>("all");
   const [status, setStatus] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [readings, setReadings] = useState<BloodPressureReading[]>([]);
-  const [dailyFactorsByDay, setDailyFactorsByDay] = useState<Record<string, DailyFactorRow>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isAddModalMounted, setIsAddModalMounted] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const addModalCloseTimer = useRef<number | null>(null);
   const chronologicalReadings = getChronologicalReadings(readings);
-  const rangeReadings = filterBloodPressureReadingsByRange(chronologicalReadings, chartRange);
+  const measurementTagIdsByReadingId = measurementTagAssignments.reduce<Record<string, string[]>>(
+    (accumulator, assignment) => {
+      const current = accumulator[assignment.measurement_id] ?? [];
+      if (!current.includes(assignment.tag_id)) {
+        accumulator[assignment.measurement_id] = [...current, assignment.tag_id];
+      }
+
+      return accumulator;
+    },
+    {},
+  );
+  const measurementTagsById = Object.fromEntries(
+    measurementTags.map((tag) => [tag.id, tag] as const),
+  ) as Record<string, MeasurementTagRow>;
+  const measurementTagCountsById = getMeasurementTagCountsById(measurementTagAssignments);
+  const manualMeasurementTags = getVisibleMeasurementTags(measurementTags);
+  const filteredChronologicalReadings = filterReadingsByTags(
+    chronologicalReadings,
+    selectedFilterTagIds,
+    measurementTagIdsByReadingId,
+  );
+  const rangeReadings = filterBloodPressureReadingsByRange(filteredChronologicalReadings, chartRange);
   const latestReading = rangeReadings[rangeReadings.length - 1] ?? null;
   const averageReading = getAverageReading(rangeReadings);
   const latestSystolic = latestReading ? latestReading.systolic : "--";
   const latestDiastolic = latestReading ? latestReading.diastolic : "--";
   const averageSystolic = averageReading ? averageReading.systolic : "--";
   const averageDiastolic = averageReading ? averageReading.diastolic : "--";
-  const measurementTagsById = Object.fromEntries(
-    measurementTags.map((tag) => [tag.id, tag] as const),
-  ) as Record<string, MeasurementTagRow>;
-  const measurementTagsByReadingId = measurementTagAssignments.reduce<Record<string, MeasurementTagRow[]>>(
-    (accumulator, assignment) => {
-      const tag = measurementTagsById[assignment.tag_id];
-      if (!tag) {
-        return accumulator;
-      }
-
-      const current = accumulator[assignment.measurement_id] ?? [];
-      if (!current.some((currentTag) => currentTag.id === tag.id)) {
-        accumulator[assignment.measurement_id] = [...current, tag];
-      }
-
-      return accumulator;
-    },
-    {},
+  const filteredTagCount = selectedFilterTagIds.length;
+  const filteredTagLabel =
+    filteredTagCount === 0
+      ? "All readings"
+      : `${filteredTagCount} filter${filteredTagCount === 1 ? "" : "s"} active`;
+  const measurementTagsByReadingId = Object.fromEntries(
+    Object.entries(measurementTagIdsByReadingId).map(([readingId, tagIds]) => [
+      readingId,
+      tagIds.map((tagId) => measurementTagsById[tagId]).filter((tag): tag is MeasurementTagRow => Boolean(tag)),
+    ]),
   );
 
   useEffect(() => {
@@ -1025,12 +1003,11 @@ export default function HomePage() {
         if (!supabase) {
           throw new Error("Supabase is not configured yet.");
         }
-        const [readingsResult, factorsResult, tagsResult, assignmentsResult] = await Promise.all([
+        const [readingsResult, tagsResult, assignmentsResult] = await Promise.all([
           supabase
             .from("blood_pressure_readings")
             .select("id, systolic, diastolic, measured_at")
             .order("measured_at", { ascending: false }),
-          supabase.from("daily_factors").select("day, slept_or_napped, had_alcohol, feeling"),
           supabase
             .from("measurement_tags")
             .select("id, name, created_at")
@@ -1044,9 +1021,6 @@ export default function HomePage() {
         if (readingsResult.error) {
           throw readingsResult.error;
         }
-        if (factorsResult.error) {
-          throw factorsResult.error;
-        }
         if (tagsResult.error) {
           throw tagsResult.error;
         }
@@ -1056,10 +1030,6 @@ export default function HomePage() {
 
         if (isActive) {
           setReadings((readingsResult.data ?? []) as BloodPressureReading[]);
-          const factorsMap = Object.fromEntries(
-            ((factorsResult.data ?? []) as DailyFactorRow[]).map((row) => [row.day, row]),
-          ) as Record<string, DailyFactorRow>;
-          setDailyFactorsByDay(factorsMap);
           setMeasurementTags((tagsResult.data ?? []) as MeasurementTagRow[]);
           setMeasurementTagAssignments((assignmentsResult.data ?? []) as MeasurementTagAssignmentRow[]);
         }
@@ -1126,62 +1096,6 @@ export default function HomePage() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!isAddModalMounted) {
-      return;
-    }
-
-    let isActive = true;
-
-    async function loadDailyFactorsForDay() {
-      if (!supabaseConfigured) {
-        return;
-      }
-
-      try {
-        const supabase = createSupabaseBrowserClient();
-        if (!supabase) {
-          throw new Error("Supabase is not configured yet.");
-        }
-
-        const { data, error } = await supabase
-          .from("daily_factors")
-          .select("day, slept_or_napped, had_alcohol, feeling")
-          .eq("day", measuredDay)
-          .maybeSingle();
-
-        if (error) {
-          throw error;
-        }
-
-        if (!isActive) {
-          return;
-        }
-
-        if (data) {
-          const row = data as DailyFactorRow;
-          setDailySleptOrNapped(row.slept_or_napped);
-          setDailyHadAlcohol(row.had_alcohol);
-          setDailyFeeling(row.feeling);
-        } else {
-          setDailySleptOrNapped(false);
-          setDailyHadAlcohol(false);
-          setDailyFeeling("neutral");
-        }
-      } catch (error) {
-        if (isActive) {
-          setStatus(error instanceof Error ? error.message : "Unable to load daily factors.");
-        }
-      }
-    }
-
-    void loadDailyFactorsForDay();
-
-    return () => {
-      isActive = false;
-    };
-  }, [isAddModalMounted, measuredDay, supabaseConfigured]);
-
   function openAddModal() {
     if (addModalCloseTimer.current !== null) {
       window.clearTimeout(addModalCloseTimer.current);
@@ -1189,9 +1103,6 @@ export default function HomePage() {
     }
 
     setMeasuredDay(toDateInputValue(new Date()));
-    setDailySleptOrNapped(false);
-    setDailyHadAlcohol(false);
-    setDailyFeeling("neutral");
     setSelectedTagIds([]);
     setTagDraft("");
     setTagStatus(null);
@@ -1217,12 +1128,11 @@ export default function HomePage() {
     if (!supabase) {
       throw new Error("Supabase is not configured yet.");
     }
-    const [readingsResult, factorsResult, tagsResult, assignmentsResult] = await Promise.all([
+    const [readingsResult, tagsResult, assignmentsResult] = await Promise.all([
       supabase
         .from("blood_pressure_readings")
         .select("id, systolic, diastolic, measured_at")
         .order("measured_at", { ascending: false }),
-      supabase.from("daily_factors").select("day, slept_or_napped, had_alcohol, feeling"),
       supabase
         .from("measurement_tags")
         .select("id, name, created_at")
@@ -1236,9 +1146,6 @@ export default function HomePage() {
     if (readingsResult.error) {
       throw readingsResult.error;
     }
-    if (factorsResult.error) {
-      throw factorsResult.error;
-    }
     if (tagsResult.error) {
       throw tagsResult.error;
     }
@@ -1247,10 +1154,6 @@ export default function HomePage() {
     }
 
     setReadings((readingsResult.data ?? []) as BloodPressureReading[]);
-    const factorsMap = Object.fromEntries(
-      ((factorsResult.data ?? []) as DailyFactorRow[]).map((row) => [row.day, row]),
-    ) as Record<string, DailyFactorRow>;
-    setDailyFactorsByDay(factorsMap);
     setMeasurementTags((tagsResult.data ?? []) as MeasurementTagRow[]);
     setMeasurementTagAssignments((assignmentsResult.data ?? []) as MeasurementTagAssignmentRow[]);
   }
@@ -1438,27 +1341,10 @@ export default function HomePage() {
           throw assignmentsError;
         }
       }
-
-      const { error: dailyError } = await supabase.from("daily_factors").upsert(
-        {
-          day: measuredDay,
-          slept_or_napped: dailySleptOrNapped,
-          had_alcohol: dailyHadAlcohol,
-          feeling: dailyFeeling,
-        },
-        { onConflict: "day" },
-      );
-
-      if (dailyError) {
-        throw dailyError;
-      }
       setStatus("Measurement saved.");
       setSystolic("");
       setDiastolic("");
       setMeasuredDay(toDateInputValue(new Date()));
-      setDailySleptOrNapped(false);
-      setDailyHadAlcohol(false);
-      setDailyFeeling("neutral");
       setSelectedTagIds([]);
       closeAddModal();
       await reloadReadings();
@@ -1516,6 +1402,49 @@ export default function HomePage() {
         )}
       </section>
 
+      <details className="page-section tag-filter-panel">
+        <summary>
+          <span>Tags</span>
+          <span className="history-count">{filteredTagLabel}</span>
+        </summary>
+        <p className="tag-help">
+          Filter the chart and history by one or more tags. Measurements must match every selected tag.
+        </p>
+        <div className="chip-row tag-filter-row" aria-label="Measurement tag filters">
+          {measurementTags.length === 0 ? (
+            <p className="status tag-empty">No tags yet. Add a measurement tag to start filtering.</p>
+          ) : (
+            <>
+              <button
+                className={`chip chip-filter${selectedFilterTagIds.length === 0 ? " chip-active" : ""}`}
+                type="button"
+                aria-pressed={selectedFilterTagIds.length === 0}
+                onClick={() => setSelectedFilterTagIds([])}
+              >
+                All
+              </button>
+              {measurementTags.map((tag) => (
+                <ChipButton
+                  key={tag.id}
+                  active={selectedFilterTagIds.includes(tag.id)}
+                  className={`chip-filter${isAutomaticMeasurementTagName(tag.name) ? " chip-filter-automatic" : ""}`}
+                  onClick={() =>
+                    setSelectedFilterTagIds((current) =>
+                      current.includes(tag.id)
+                        ? current.filter((currentTagId) => currentTagId !== tag.id)
+                        : [...current, tag.id],
+                    )
+                  }
+                  >
+                  <span className="chip-label">{tag.name}</span>
+                  <span className="chip-count-badge">{measurementTagCountsById[tag.id] ?? 0}</span>
+                </ChipButton>
+              ))}
+            </>
+          )}
+        </div>
+      </details>
+
       <section className="page-section" id="add">
         {!supabaseConfigured ? (
           <p className="status">
@@ -1537,17 +1466,17 @@ export default function HomePage() {
       <details className="page-section history-panel" id="history">
         <summary>
           <span>Recent readings</span>
-          <span className="history-count">{readings.length}</span>
+          <span className="history-count">{filteredChronologicalReadings.length}</span>
         </summary>
         {isLoading ? (
           <p className="status history-copy">Loading readings...</p>
-        ) : readings.length === 0 ? (
-          <p className="status history-copy">No readings yet.</p>
+        ) : filteredChronologicalReadings.length === 0 ? (
+          <p className="status history-copy">
+            {selectedFilterTagIds.length === 0 ? "No readings yet." : "No readings match the selected tags."}
+          </p>
         ) : (
           <ul className="history-list">
-            {readings.map((reading) => {
-              const readingDay = toDateInputValue(new Date(reading.measured_at));
-              const dailyFactors = dailyFactorsByDay[readingDay];
+            {filteredChronologicalReadings.map((reading) => {
               const readingTags = measurementTagsByReadingId[reading.id] ?? [];
 
               return (
@@ -1574,14 +1503,10 @@ export default function HomePage() {
                     <div className="history-chips">
                       {readingTags.map((tag) => (
                         <span key={tag.id} className="history-chip">
-                          {tag.name}
+                          <span className="chip-label">{tag.name}</span>
+                          <span className="chip-count-badge">{measurementTagCountsById[tag.id] ?? 0}</span>
                         </span>
                       ))}
-                      {dailyFactors?.had_alcohol ? <span className="history-chip">had alcohol</span> : null}
-                      {dailyFactors?.slept_or_napped ? <span className="history-chip">slept / nap</span> : null}
-                      <span className="history-chip">
-                        {formatHistoryFeeling(dailyFactors?.feeling ?? "neutral")}
-                      </span>
                     </div>
                   </div>
                 </li>
@@ -1604,18 +1529,13 @@ export default function HomePage() {
         measuredDay={measuredDay}
         setMeasuredDay={setMeasuredDay}
         measurementTags={measurementTags}
+        measurementTagCountsById={measurementTagCountsById}
         selectedTagIds={selectedTagIds}
         tagDraft={tagDraft}
         setTagDraft={setTagDraft}
         tagStatus={tagStatus}
         onCreateTag={() => void handleCreateMeasurementTag()}
         onToggleTag={handleToggleMeasurementTag}
-        dailySleptOrNapped={dailySleptOrNapped}
-        setDailySleptOrNapped={setDailySleptOrNapped}
-        dailyHadAlcohol={dailyHadAlcohol}
-        setDailyHadAlcohol={setDailyHadAlcohol}
-        dailyFeeling={dailyFeeling}
-        setDailyFeeling={setDailyFeeling}
         onClose={closeAddModal}
         onSubmit={handleSubmit}
       />

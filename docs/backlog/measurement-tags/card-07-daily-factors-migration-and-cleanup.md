@@ -1,5 +1,7 @@
 # Card 07: Daily Factors Migration And Cleanup
 
+Status: done
+
 ## Objective
 Migrate the app away from `daily_factors` and clean up the old app and database paths once tags are fully in place.
 
@@ -18,3 +20,4 @@ Migrate the app away from `daily_factors` and clean up the old app and database 
 ## Notes
 - This card should be treated as the final cutover step, not the start of the feature.
 - Keep the migration path explicit so the app can run safely during the transition.
+- Implemented in [`app/page.tsx`](../../../app/page.tsx) and [`supabase/migrations/20260423003000_migrate_daily_factors_to_measurement_tags.sql`](../../../supabase/migrations/20260423003000_migrate_daily_factors_to_measurement_tags.sql)

@@ -347,10 +347,8 @@ button:focus-visible {
 }
 
 .history-item {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
+  display: grid;
+  gap: 4px;
   border: 0;
   border-bottom: 1px solid var(--line);
   border-radius: 0;
@@ -362,25 +360,37 @@ button:focus-visible {
 .history-content {
   min-width: 0;
   display: grid;
-  gap: 6px;
+  gap: 4px;
 }
 
-.history-meta {
+.history-top {
   min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
 }
 
 .history-item strong {
-  display: block;
+  display: inline-block;
   font-size: 0.98rem;
   letter-spacing: -0.02em;
 }
 
+.history-actions {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .history-date {
-  display: block;
-  margin-top: 2px;
+  display: inline-block;
   color: var(--muted);
   font-size: 0.82rem;
   line-height: 1.2;
+  white-space: nowrap;
 }
 
 .history-chips {
@@ -415,6 +425,7 @@ button:focus-visible {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 auto;
 }
 
 .history-delete:active {

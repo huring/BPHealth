@@ -262,19 +262,19 @@ function getChartAxisTickIndexes(length: number, maxTicks = 5) {
 
 function getRangeLabel(range: BloodPressureRange) {
   if (range === "1d") {
-    return "1d";
+    return "Today";
   }
 
   if (range === "1w") {
-    return "1w";
+    return "Week";
   }
 
   if (range === "1m") {
-    return "1m";
+    return "Month";
   }
 
   if (range === "1y") {
-    return "1y";
+    return "Year";
   }
 
   return "All";
@@ -1206,11 +1206,23 @@ export default function HomePage() {
               return (
                 <li key={reading.id} className="history-item">
                   <div className="history-content">
-                    <div className="history-meta">
+                    <div className="history-top">
                       <strong>{formatReadingLabel(reading)}</strong>
-                      <span className="history-date" suppressHydrationWarning>
-                        {formatReadingTime(reading.measured_at, isMounted)}
-                      </span>
+                      <div className="history-actions">
+                        <span className="history-date" suppressHydrationWarning>
+                          {formatReadingTime(reading.measured_at, isMounted)}
+                        </span>
+                        <button
+                          className="history-delete"
+                          type="button"
+                          aria-label={`Delete ${formatReadingLabel(reading)} from ${formatReadingTime(reading.measured_at, isMounted)}`}
+                          onClick={() => void handleDelete(reading)}
+                        >
+                          <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
+                            <path d="M9 3.75A1.75 1.75 0 0 1 10.75 2h2.5A1.75 1.75 0 0 1 15 3.75V4h3.25a.75.75 0 0 1 0 1.5h-.57l-.77 11.07A2.25 2.25 0 0 1 14.66 18H9.34a2.25 2.25 0 0 1-2.25-2.43L6.32 5.5h-.57a.75.75 0 0 1 0-1.5H9v-.25Zm1.5.25v.25h3v-.25a.25.25 0 0 0-.25-.25h-2.5a.25.25 0 0 0-.25.25Zm-1.82 1.5.7 10.07c.02.38.34.68.72.68h5.4c.38 0 .7-.3.72-.68l.7-10.07H8.68Zm1.57 2.25a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5a.75.75 0 0 1 .75-.75Zm4.5 0a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5a.75.75 0 0 1 .75-.75Z" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                     <div className="history-chips">
                       <span className="history-chip">
@@ -1223,16 +1235,6 @@ export default function HomePage() {
                       </span>
                     </div>
                   </div>
-                  <button
-                    className="history-delete"
-                    type="button"
-                    aria-label={`Delete ${formatReadingLabel(reading)} from ${formatReadingTime(reading.measured_at, isMounted)}`}
-                    onClick={() => void handleDelete(reading)}
-                  >
-                    <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
-                      <path d="M9 3.75A1.75 1.75 0 0 1 10.75 2h2.5A1.75 1.75 0 0 1 15 3.75V4h3.25a.75.75 0 0 1 0 1.5h-.57l-.77 11.07A2.25 2.25 0 0 1 14.66 18H9.34a2.25 2.25 0 0 1-2.25-2.43L6.32 5.5h-.57a.75.75 0 0 1 0-1.5H9v-.25Zm1.5.25v.25h3v-.25a.25.25 0 0 0-.25-.25h-2.5a.25.25 0 0 0-.25.25Zm-1.82 1.5.7 10.07c.02.38.34.68.72.68h5.4c.38 0 .7-.3.72-.68l.7-10.07H8.68Zm1.57 2.25a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5a.75.75 0 0 1 .75-.75Zm4.5 0a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5a.75.75 0 0 1 .75-.75Z" />
-                    </svg>
-                  </button>
                 </li>
               );
             })}

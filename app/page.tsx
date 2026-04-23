@@ -792,6 +792,10 @@ export default function HomePage() {
   const rangeReadings = filterBloodPressureReadingsByRange(chronologicalReadings, chartRange);
   const latestReading = rangeReadings[rangeReadings.length - 1] ?? null;
   const averageReading = getAverageReading(rangeReadings);
+  const latestSystolic = latestReading ? latestReading.systolic : "--";
+  const latestDiastolic = latestReading ? latestReading.diastolic : "--";
+  const averageSystolic = averageReading ? averageReading.systolic : "--";
+  const averageDiastolic = averageReading ? averageReading.diastolic : "--";
 
   useEffect(() => {
     setIsMounted(true);
@@ -1156,70 +1160,28 @@ export default function HomePage() {
         </p>
       ) : null}
       <header className="page-hero" id="latest">
-        {!isMounted ? (
-          <div className="page-hero-stats" aria-label="Latest and average blood pressure">
-            <div className="hero-stat hero-stat-placeholder">
-              <span className="hero-stat-label">Latest</span>
-              <strong className="hero-stat-value">
-                <span className="bp-systolic">--</span>
-                <span className="bp-separator">/</span>
-                <span className="bp-diastolic">--</span>
-              </strong>
-              <span className="hero-stat-unit">mmHg</span>
-            </div>
+        <div className="page-hero-stats" aria-label="Latest and average blood pressure">
+          <div className={`hero-stat${latestReading ? "" : " hero-stat-placeholder"}`}>
+            <span className="hero-stat-label">Latest</span>
+            <strong className="hero-stat-value">
+              <span className="bp-systolic">{latestSystolic}</span>
+              <span className="bp-separator">/</span>
+              <span className="bp-diastolic">{latestDiastolic}</span>
+            </strong>
+            <span className="hero-stat-unit">mmHg</span>
+          </div>
 
-            <div className="hero-stat hero-stat-placeholder">
-              <span className="hero-stat-label">Average</span>
-              <strong className="hero-stat-value">
-                <span className="bp-systolic">--</span>
-                <span className="bp-separator">/</span>
-                <span className="bp-diastolic">--</span>
-              </strong>
-              <span className="hero-stat-unit">mmHg</span>
-            </div>
+          <div className={`hero-stat${averageReading ? "" : " hero-stat-placeholder"}`}>
+            <span className="hero-stat-label">Average</span>
+            <strong className="hero-stat-value">
+              <span className="bp-systolic">{averageSystolic}</span>
+              <span className="bp-separator">/</span>
+              <span className="bp-diastolic">{averageDiastolic}</span>
+            </strong>
+            <span className="hero-stat-unit">mmHg</span>
           </div>
-        ) : latestReading && averageReading ? (
-          <div className="page-hero-stats" aria-label="Latest and average blood pressure">
-            <div className="hero-stat">
-              <span className="hero-stat-label">Latest</span>
-              <strong className="hero-stat-value">
-                <span className="bp-systolic">{latestReading.systolic}</span>
-                <span className="bp-separator">/</span>
-                <span className="bp-diastolic">{latestReading.diastolic}</span>
-              </strong>
-              <span className="hero-stat-unit">mmHg</span>
-            </div>
-
-            <div className="hero-stat">
-              <span className="hero-stat-label">Average</span>
-              <strong className="hero-stat-value">
-                <span className="bp-systolic">{averageReading.systolic}</span>
-                <span className="bp-separator">/</span>
-                <span className="bp-diastolic">{averageReading.diastolic}</span>
-              </strong>
-              <span className="hero-stat-unit">mmHg</span>
-            </div>
-          </div>
-        ) : latestReading ? (
-          <div className="page-hero-stats" aria-label="Latest blood pressure">
-            <div className="hero-stat">
-              <span className="hero-stat-label">Latest</span>
-              <strong className="hero-stat-value">
-                <span className="bp-systolic">{latestReading.systolic}</span>
-                <span className="bp-separator">/</span>
-                <span className="bp-diastolic">{latestReading.diastolic}</span>
-              </strong>
-              <span className="hero-stat-unit">mmHg</span>
-            </div>
-            <div className="hero-stat hero-stat-empty">
-              <span className="hero-stat-label">Average</span>
-              <strong className="hero-stat-value">--/--</strong>
-              <span className="hero-stat-unit">mmHg</span>
-            </div>
-          </div>
-        ) : (
-          <p className="page-hero-note">No readings yet.</p>
-        )}
+        </div>
+        {!latestReading ? <p className="page-hero-note">No readings yet.</p> : null}
       </header>
 
       <section className="page-section" id="chart">

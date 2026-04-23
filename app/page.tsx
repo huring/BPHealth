@@ -1345,14 +1345,12 @@ export default function HomePage() {
       </section>
 
       <section className="page-section" id="add">
-        <h2>Add reading</h2>
         {!supabaseConfigured ? (
           <p className="status">
             Supabase environment variables are missing. Add `NEXT_PUBLIC_SUPABASE_URL`
             and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to enable saving and history.
           </p>
         ) : null}
-        <p className="panel-lede">Open a full-screen entry flow for a quicker mobile input.</p>
         <button
           ref={addMeasurementButtonRef}
           className="add-measurement-button"

@@ -21,6 +21,7 @@ type BloodPressureReading = {
 };
 
 type DailyFeeling = "good_productive" | "neutral" | "bad";
+type BloodPressurePeriod = "morning" | "lunch" | "evening";
 
 type DailyFactorRow = {
   day: string;
@@ -44,6 +45,34 @@ function shiftDateInputValue(dateValue: string, days: number) {
   const date = new Date(`${dateValue}T00:00:00`);
   date.setDate(date.getDate() + days);
   return toDateInputValue(date);
+}
+
+function getBloodPressurePeriodLabel(period: BloodPressurePeriod) {
+  if (period === "morning") {
+    return "Morning";
+  }
+
+  if (period === "lunch") {
+    return "Lunch";
+  }
+
+  return "Evening";
+}
+
+function getBloodPressurePeriodTime(period: BloodPressurePeriod) {
+  if (period === "morning") {
+    return "08:00:00";
+  }
+
+  if (period === "lunch") {
+    return "12:00:00";
+  }
+
+  return "18:00:00";
+}
+
+function getBloodPressureMeasuredAt(day: string, period: BloodPressurePeriod) {
+  return new Date(`${day}T${getBloodPressurePeriodTime(period)}`).toISOString();
 }
 
 function formatReadingTime(measuredAt: string) {
@@ -408,13 +437,14 @@ export default function HomePage() {
   const supabaseConfigured = hasSupabaseConfig();
   const [systolic, setSystolic] = useState("");
   const [diastolic, setDiastolic] = useState("");
-  const [measuredAt, setMeasuredAt] = useState(() => toDateTimeLocalValue(new Date()));
+  const [measuredDay, setMeasuredDay] = useState(() => toDateInputValue(new Date()));
+  const [measuredPeriod, setMeasuredPeriod] = useState<BloodPressurePeriod>("morning");
   const [status, setStatus] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [readings, setReadings] = useState<BloodPressureReading[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const canSubmit = systolic.trim() !== "" && diastolic.trim() !== "" && measuredAt.trim() !== "";
+  const canSubmit = systolic.trim() !== "" && diastolic.trim() !== "" && measuredDay.trim() !== "";
   const latestReading = readings[0] ?? null;
 
   useEffect(() => {
@@ -532,7 +562,7 @@ export default function HomePage() {
       const { error } = await supabase.from("blood_pressure_readings").insert({
         systolic: Number(systolic),
         diastolic: Number(diastolic),
-        measured_at: new Date(measuredAt).toISOString(),
+        measured_at: getBloodPressureMeasuredAt(measuredDay, measuredPeriod),
       });
 
       if (error) {
@@ -542,7 +572,8 @@ export default function HomePage() {
       setStatus("Reading saved.");
       setSystolic("");
       setDiastolic("");
-      setMeasuredAt(toDateTimeLocalValue(new Date()));
+      setMeasuredDay(toDateInputValue(new Date()));
+      setMeasuredPeriod("morning");
       await reloadReadings();
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Unable to save reading.");
@@ -630,31 +661,27 @@ export default function HomePage() {
           </label>
 
           <label className="field field-wide">
-            <span>Measured at</span>
+            <span>Date</span>
             <input
-              name="measured_at"
-              type="datetime-local"
-              value={measuredAt}
-              onChange={(event) => setMeasuredAt(event.target.value)}
+              name="measured_day"
+              type="date"
+              value={measuredDay}
+              onChange={(event) => setMeasuredDay(event.target.value)}
             />
           </label>
 
           <div className="chip-stack">
-            <span className="field-label">Quick time</span>
+            <span className="field-label">Time of day</span>
             <div className="chip-row">
-              <ChipButton onClick={() => setMeasuredAt(toDateTimeLocalValue(new Date()))}>
-                Now
-              </ChipButton>
-              <ChipButton
-                onClick={() => setMeasuredAt(toDateTimeLocalValue(new Date(Date.now() - 15 * 60 * 1000)))}
-              >
-                -15m
-              </ChipButton>
-              <ChipButton
-                onClick={() => setMeasuredAt(toDateTimeLocalValue(new Date(Date.now() - 30 * 60 * 1000)))}
-              >
-                -30m
-              </ChipButton>
+              {(["morning", "lunch", "evening"] as BloodPressurePeriod[]).map((period) => (
+                <ChipButton
+                  key={period}
+                  active={measuredPeriod === period}
+                  onClick={() => setMeasuredPeriod(period)}
+                >
+                  {getBloodPressurePeriodLabel(period)}
+                </ChipButton>
+              ))}
             </div>
           </div>
 

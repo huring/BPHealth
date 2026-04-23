@@ -719,7 +719,7 @@ function BloodPressureChart({
 
   const width = 640;
   const height = 324;
-  const padding = 32;
+  const padding = 48;
   const axisY = height - 34;
   const innerWidth = width - padding * 2;
   const allValues = rangeReadings.flatMap((reading) => [reading.systolic, reading.diastolic]);
@@ -833,7 +833,7 @@ function BloodPressureChart({
             return (
               <g key={tickValue}>
                 <line className="chart-grid" x1={padding} x2={width - padding} y1={y} y2={y} />
-                <text className="chart-tick" x={8} y={y + 4}>
+                <text className="chart-tick" x={12} y={y + 4}>
                   {formatChartTickValue(tickValue)}
                 </text>
               </g>

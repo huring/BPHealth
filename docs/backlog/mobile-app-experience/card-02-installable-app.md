@@ -15,6 +15,10 @@ Make the app installable from the phone browser to the home screen.
 - The app can be installed to the home screen
 - The installed version feels distinct from a browser tab
 
+## Status
+
+- Done
+
 ## Notes
 
 - Keep the install flow simple and native-feeling

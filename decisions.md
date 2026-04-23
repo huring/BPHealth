@@ -41,7 +41,7 @@
 ## Mobile App Experience Card Status
 
 - [x] Card 01: PWA Foundation
-- [ ] Card 02: Installable App
+- [x] Card 02: Installable App
 - [ ] Card 03: Mobile Viewport and Safe Areas
 - [ ] Card 04: App Shell and Navigation
 - [ ] Card 05: Touch Interactions

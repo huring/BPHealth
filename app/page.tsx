@@ -6,6 +6,7 @@ import {
   createSupabaseBrowserClient,
   hasSupabaseConfig,
 } from "@/lib/supabase/client";
+import { InstallPrompt } from "./install-prompt";
 
 function toDateTimeLocalValue(date: Date) {
   const offsetMs = date.getTimezoneOffset() * 60_000;
@@ -806,6 +807,7 @@ export default function HomePage() {
 
   return (
     <main className="shell app-shell">
+      <InstallPrompt />
       <header className="page-hero">
         <p className="eyebrow">Latest reading</p>
         {latestReading ? (

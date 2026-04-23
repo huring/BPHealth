@@ -617,18 +617,6 @@ button:focus-visible {
   display: block;
 }
 
-.chart-range-status {
-  position: static;
-  padding: 0;
-  border-radius: 0;
-  background: transparent;
-  border: 0;
-  color: var(--muted);
-  font-size: 0.8rem;
-  backdrop-filter: none;
-  margin-bottom: 4px;
-}
-
 .page-hero {
   display: grid;
   gap: 10px;
@@ -646,6 +634,9 @@ button:focus-visible {
 .hero-stat {
   display: grid;
   gap: 6px;
+  justify-items: center;
+  text-align: center;
+  position: relative;
   min-width: 0;
   padding: 14px 14px 13px;
   border: 1px solid var(--line);
@@ -695,6 +686,19 @@ button:focus-visible {
   font-weight: 700;
   color: var(--muted);
   letter-spacing: 0.08em;
+}
+
+.hero-stat-footnote {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 8px;
+  font-size: 0.62rem;
+  line-height: 1;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--muted) 82%, white 18%);
+  letter-spacing: 0.02em;
+  text-align: center;
 }
 
 .page-hero-note {
@@ -864,10 +868,10 @@ button:focus-visible {
 
 .chart-ranges.segmented {
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 4px;
-  padding: 4px;
+  gap: 2px;
+  padding: 2px;
   border: 0;
-  border-radius: 14px;
+  border-radius: 12px;
   background: rgba(5, 8, 12, 0.88);
   box-shadow: none;
 }
@@ -886,10 +890,11 @@ button:focus-visible {
 }
 
 .chart-ranges.segmented .segmented-option {
-  min-height: 32px;
-  padding: 7px 5px;
-  font-size: 0.7rem;
-  border-radius: 10px;
+  min-height: 18px;
+  padding: 3px 4px;
+  font-size: 0.64rem;
+  line-height: 1;
+  border-radius: 8px;
 }
 
 .segmented-option-active {

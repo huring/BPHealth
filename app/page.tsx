@@ -676,9 +676,6 @@ function BloodPressureChart({
       </div>
 
       <div className="chart-stage">
-        <div className="chart-range-status" aria-live="polite">
-          Showing {rangeReadings.length} reading{rangeReadings.length === 1 ? "" : "s"} for {getRangeLabel(timeRange)}
-        </div>
         <svg
           aria-label="Blood pressure readings over time"
           className="chart-svg"
@@ -876,7 +873,6 @@ export default function HomePage() {
     if (cachedReadings && cachedReadings.length > 0) {
       setReadings(cachedReadings);
       setIsLoading(false);
-      setStatus("Showing cached readings while syncing.");
     }
   }, []);
 
@@ -1179,6 +1175,7 @@ export default function HomePage() {
               <span className="bp-diastolic">{averageDiastolic}</span>
             </strong>
             <span className="hero-stat-unit">mmHg</span>
+            <span className="hero-stat-footnote">Based on {rangeReadings.length} readings</span>
           </div>
         </div>
         {!latestReading ? <p className="page-hero-note">No readings yet.</p> : null}

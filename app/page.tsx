@@ -649,17 +649,6 @@ function BloodPressureChart({
       </div>
 
       <div className="chart-meta">
-        <div className="chart-legend">
-          <span>
-            <i className="legend-systolic" />
-            Systolic
-          </span>
-          <span>
-            <i className="legend-diastolic" />
-            Diastolic
-          </span>
-        </div>
-
         {selectedReading ? (
           <button
             className="chart-selection"
@@ -1150,18 +1139,25 @@ export default function HomePage() {
         </p>
       ) : null}
       <header className="page-hero" id="latest">
-        <p className="eyebrow">Latest reading</p>
         {latestReading && averageReading ? (
           <div className="page-hero-stats" aria-label="Latest and average blood pressure">
             <div className="hero-stat">
               <span className="hero-stat-label">Latest</span>
-              <strong className="hero-stat-value">{formatReadingLabel(latestReading)}</strong>
+              <strong className="hero-stat-value">
+                <span className="bp-systolic">{latestReading.systolic}</span>
+                <span className="bp-separator">/</span>
+                <span className="bp-diastolic">{latestReading.diastolic}</span>
+              </strong>
               <span className="hero-stat-unit">mmHg</span>
             </div>
 
             <div className="hero-stat">
               <span className="hero-stat-label">Average</span>
-              <strong className="hero-stat-value">{formatAverageLabel(averageReading)}</strong>
+              <strong className="hero-stat-value">
+                <span className="bp-systolic">{averageReading.systolic}</span>
+                <span className="bp-separator">/</span>
+                <span className="bp-diastolic">{averageReading.diastolic}</span>
+              </strong>
               <span className="hero-stat-unit">mmHg</span>
             </div>
           </div>
@@ -1169,7 +1165,11 @@ export default function HomePage() {
           <div className="page-hero-stats" aria-label="Latest blood pressure">
             <div className="hero-stat">
               <span className="hero-stat-label">Latest</span>
-              <strong className="hero-stat-value">{formatReadingLabel(latestReading)}</strong>
+              <strong className="hero-stat-value">
+                <span className="bp-systolic">{latestReading.systolic}</span>
+                <span className="bp-separator">/</span>
+                <span className="bp-diastolic">{latestReading.diastolic}</span>
+              </strong>
               <span className="hero-stat-unit">mmHg</span>
             </div>
             <div className="hero-stat hero-stat-empty">

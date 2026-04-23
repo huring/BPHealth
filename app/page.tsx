@@ -27,6 +27,12 @@ type MeasurementTagRow = {
   created_at: string;
 };
 
+type MeasurementTagAssignmentRow = {
+  measurement_id: string;
+  tag_id: string;
+  created_at: string;
+};
+
 type DailyFeeling = "good_productive" | "neutral" | "bad";
 type BloodPressurePeriod = "morning" | "lunch" | "evening";
 
@@ -151,6 +157,10 @@ function formatHistoryFeeling(feeling: DailyFeeling) {
 
 function normalizeMeasurementTagName(name: string) {
   return name.trim().replace(/\s+/g, " ");
+}
+
+function formatMeasurementDayLabel(day: string) {
+  return formatPrettyDate(new Date(`${day}T00:00:00`), true, false);
 }
 
 function getLocalDayStart(date: Date) {
@@ -407,6 +417,7 @@ function BloodPressureEntryModal({
   const systolicInputRef = useRef<HTMLInputElement>(null);
   const diastolicInputRef = useRef<HTMLInputElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
+  const dateButtonRef = useRef<HTMLButtonElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
   const selectedTags = measurementTags.filter((tag) => selectedTagIds.includes(tag.id));
 
@@ -477,7 +488,7 @@ function BloodPressureEntryModal({
 
             <div className="entry-modal-grid">
               <label className="field field-compact entry-modal-field">
-                <span>SYS</span>
+                <span>Systolic</span>
                 <input
                   ref={systolicInputRef}
                   aria-label="Systolic"
@@ -500,7 +511,7 @@ function BloodPressureEntryModal({
               </label>
 
               <label className="field field-compact entry-modal-field">
-                <span>DIA</span>
+                <span>Diastolic</span>
                 <input
                   ref={diastolicInputRef}
                   aria-label="Diastolic"
@@ -513,26 +524,63 @@ function BloodPressureEntryModal({
                   step="1"
                   value={diastolic}
                   onChange={(event) => setDiastolic(event.target.value)}
-                  onKeyDown={(event) => {
+                    onKeyDown={(event) => {
                     if (event.key === "Enter") {
                       event.preventDefault();
-                      dateInputRef.current?.focus();
+                      dateButtonRef.current?.focus();
                     }
                   }}
                 />
               </label>
 
-              <label className="field field-wide entry-modal-field entry-modal-date">
+              <div className="field field-wide entry-modal-field entry-modal-date">
                 <span>Date</span>
+                <div className="date-picker-row">
+                  <button
+                    className="date-step-button"
+                    type="button"
+                    aria-label="Previous day"
+                    onClick={() => setMeasuredDay(shiftDateInputValue(measuredDay, -1))}
+                  >
+                    −
+                  </button>
+                  <button
+                    ref={dateButtonRef}
+                    className="date-picker-button"
+                    type="button"
+                    onClick={() => {
+                      const input = dateInputRef.current;
+                      if (input?.showPicker) {
+                        input.showPicker();
+                        return;
+                      }
+
+                      input?.click();
+                    }}
+                  >
+                    {formatMeasurementDayLabel(measuredDay)}
+                  </button>
+                  <button
+                    className="date-step-button"
+                    type="button"
+                    aria-label="Next day"
+                    onClick={() => setMeasuredDay(shiftDateInputValue(measuredDay, 1))}
+                  >
+                    +
+                  </button>
+                </div>
                 <input
                   ref={dateInputRef}
+                  className="date-native-input"
                   enterKeyHint="done"
                   name="measured_day"
                   type="date"
                   value={measuredDay}
                   onChange={(event) => setMeasuredDay(event.target.value)}
+                  tabIndex={-1}
+                  aria-hidden="true"
                 />
-              </label>
+              </div>
             </div>
 
             <div className="segmented-stack">
@@ -944,6 +992,7 @@ export default function HomePage() {
   const [dailyHadAlcohol, setDailyHadAlcohol] = useState(false);
   const [dailyFeeling, setDailyFeeling] = useState<DailyFeeling>("neutral");
   const [measurementTags, setMeasurementTags] = useState<MeasurementTagRow[]>([]);
+  const [measurementTagAssignments, setMeasurementTagAssignments] = useState<MeasurementTagAssignmentRow[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
   const [tagStatus, setTagStatus] = useState<string | null>(null);
@@ -964,6 +1013,25 @@ export default function HomePage() {
   const latestDiastolic = latestReading ? latestReading.diastolic : "--";
   const averageSystolic = averageReading ? averageReading.systolic : "--";
   const averageDiastolic = averageReading ? averageReading.diastolic : "--";
+  const measurementTagsById = Object.fromEntries(
+    measurementTags.map((tag) => [tag.id, tag] as const),
+  ) as Record<string, MeasurementTagRow>;
+  const measurementTagsByReadingId = measurementTagAssignments.reduce<Record<string, MeasurementTagRow[]>>(
+    (accumulator, assignment) => {
+      const tag = measurementTagsById[assignment.tag_id];
+      if (!tag) {
+        return accumulator;
+      }
+
+      const current = accumulator[assignment.measurement_id] ?? [];
+      if (!current.some((currentTag) => currentTag.id === tag.id)) {
+        accumulator[assignment.measurement_id] = [...current, tag];
+      }
+
+      return accumulator;
+    },
+    {},
+  );
 
   useEffect(() => {
     setIsMounted(true);
@@ -986,7 +1054,7 @@ export default function HomePage() {
         if (!supabase) {
           throw new Error("Supabase is not configured yet.");
         }
-        const [readingsResult, factorsResult, tagsResult] = await Promise.all([
+        const [readingsResult, factorsResult, tagsResult, assignmentsResult] = await Promise.all([
           supabase
             .from("blood_pressure_readings")
             .select("id, systolic, diastolic, measured_at")
@@ -995,6 +1063,10 @@ export default function HomePage() {
           supabase
             .from("measurement_tags")
             .select("id, name, created_at")
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("measurement_tag_assignments")
+            .select("measurement_id, tag_id, created_at")
             .order("created_at", { ascending: false }),
         ]);
 
@@ -1007,6 +1079,9 @@ export default function HomePage() {
         if (tagsResult.error) {
           throw tagsResult.error;
         }
+        if (assignmentsResult.error) {
+          throw assignmentsResult.error;
+        }
 
         if (isActive) {
           setReadings((readingsResult.data ?? []) as BloodPressureReading[]);
@@ -1015,6 +1090,7 @@ export default function HomePage() {
           ) as Record<string, DailyFactorRow>;
           setDailyFactorsByDay(factorsMap);
           setMeasurementTags((tagsResult.data ?? []) as MeasurementTagRow[]);
+          setMeasurementTagAssignments((assignmentsResult.data ?? []) as MeasurementTagAssignmentRow[]);
         }
       } catch (error) {
         if (isActive) {
@@ -1171,7 +1247,7 @@ export default function HomePage() {
     if (!supabase) {
       throw new Error("Supabase is not configured yet.");
     }
-    const [readingsResult, factorsResult, tagsResult] = await Promise.all([
+    const [readingsResult, factorsResult, tagsResult, assignmentsResult] = await Promise.all([
       supabase
         .from("blood_pressure_readings")
         .select("id, systolic, diastolic, measured_at")
@@ -1180,6 +1256,10 @@ export default function HomePage() {
       supabase
         .from("measurement_tags")
         .select("id, name, created_at")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("measurement_tag_assignments")
+        .select("measurement_id, tag_id, created_at")
         .order("created_at", { ascending: false }),
     ]);
 
@@ -1192,6 +1272,9 @@ export default function HomePage() {
     if (tagsResult.error) {
       throw tagsResult.error;
     }
+    if (assignmentsResult.error) {
+      throw assignmentsResult.error;
+    }
 
     setReadings((readingsResult.data ?? []) as BloodPressureReading[]);
     const factorsMap = Object.fromEntries(
@@ -1199,6 +1282,7 @@ export default function HomePage() {
     ) as Record<string, DailyFactorRow>;
     setDailyFactorsByDay(factorsMap);
     setMeasurementTags((tagsResult.data ?? []) as MeasurementTagRow[]);
+    setMeasurementTagAssignments((assignmentsResult.data ?? []) as MeasurementTagAssignmentRow[]);
   }
 
   async function handleCreateMeasurementTag() {
@@ -1310,14 +1394,33 @@ export default function HomePage() {
       if (!supabase) {
         throw new Error("Supabase is not configured yet.");
       }
-      const { error } = await supabase.from("blood_pressure_readings").insert({
-        systolic: Number(systolic),
-        diastolic: Number(diastolic),
-        measured_at: getBloodPressureMeasuredAt(measuredDay, measuredPeriod),
-      });
+      const { data, error } = await supabase
+        .from("blood_pressure_readings")
+        .insert({
+          systolic: Number(systolic),
+          diastolic: Number(diastolic),
+          measured_at: getBloodPressureMeasuredAt(measuredDay, measuredPeriod),
+        })
+        .select("id")
+        .single();
 
       if (error) {
         throw error;
+      }
+
+      if (data && selectedTagIds.length > 0) {
+        const assignmentRows = selectedTagIds.map((tagId) => ({
+          measurement_id: data.id,
+          tag_id: tagId,
+        }));
+
+        const { error: assignmentsError } = await supabase
+          .from("measurement_tag_assignments")
+          .insert(assignmentRows);
+
+        if (assignmentsError) {
+          throw assignmentsError;
+        }
       }
 
       const { error: dailyError } = await supabase.from("daily_factors").upsert(
@@ -1341,6 +1444,7 @@ export default function HomePage() {
       setDailySleptOrNapped(false);
       setDailyHadAlcohol(false);
       setDailyFeeling("neutral");
+      setSelectedTagIds([]);
       closeAddModal();
       await reloadReadings();
     } catch (error) {
@@ -1429,6 +1533,7 @@ export default function HomePage() {
             {readings.map((reading) => {
               const readingDay = toDateInputValue(new Date(reading.measured_at));
               const dailyFactors = dailyFactorsByDay[readingDay];
+              const readingTags = measurementTagsByReadingId[reading.id] ?? [];
 
               return (
                 <li key={reading.id} className="history-item">
@@ -1455,6 +1560,11 @@ export default function HomePage() {
                       <span className="history-chip">
                         {getBloodPressurePeriodLabel(getBloodPressurePeriodFromTimestamp(reading.measured_at)).toLowerCase()}
                       </span>
+                      {readingTags.map((tag) => (
+                        <span key={tag.id} className="history-chip">
+                          {tag.name}
+                        </span>
+                      ))}
                       {dailyFactors?.had_alcohol ? <span className="history-chip">had alcohol</span> : null}
                       {dailyFactors?.slept_or_napped ? <span className="history-chip">slept / nap</span> : null}
                       <span className="history-chip">

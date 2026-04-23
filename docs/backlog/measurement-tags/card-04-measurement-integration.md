@@ -1,5 +1,7 @@
 # Card 04: Measurement Integration
 
+Status: done
+
 ## Objective
 Integrate tags into the measurement flow.
 

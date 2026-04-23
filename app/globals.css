@@ -361,6 +361,59 @@ button:focus-visible {
   margin-top: -2px;
 }
 
+.date-picker-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.date-picker-button,
+.date-step-button {
+  min-height: 44px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+}
+
+.date-step-button {
+  width: 44px;
+  padding: 0;
+}
+
+.date-picker-button {
+  width: 100%;
+  padding: 0 14px;
+  text-align: left;
+  background: rgba(124, 169, 224, 0.08);
+}
+
+.date-picker-button:focus-visible,
+.date-step-button:focus-visible {
+  outline: 2px solid rgba(124, 169, 224, 0.45);
+  outline-offset: 2px;
+}
+
+.date-picker-button:active,
+.date-step-button:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+.date-native-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .tag-chip-cloud {
   gap: 6px;
 }
@@ -1238,6 +1291,10 @@ button:focus-visible {
     align-items: flex-start;
     flex-direction: column;
     gap: 4px;
+  }
+
+  .date-picker-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
   .chart-axis-label {

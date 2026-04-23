@@ -40,6 +40,8 @@ type AverageReading = {
   diastolic: number;
 };
 
+type BloodPressureRange = "1d" | "1w" | "1m" | "1y" | "all";
+
 function toDateInputValue(date: Date) {
   const offsetMs = date.getTimezoneOffset() * 60_000;
   const localTime = new Date(date.getTime() - offsetMs);
@@ -179,6 +181,58 @@ function getChartAxisTickIndexes(length: number, maxTicks = 5) {
   return Array.from(new Set(indexes)).sort((left, right) => left - right);
 }
 
+function getRangeLabel(range: BloodPressureRange) {
+  if (range === "1d") {
+    return "1d";
+  }
+
+  if (range === "1w") {
+    return "1w";
+  }
+
+  if (range === "1m") {
+    return "1m";
+  }
+
+  if (range === "1y") {
+    return "1y";
+  }
+
+  return "All";
+}
+
+function getRangeWindowDays(range: BloodPressureRange) {
+  if (range === "1d") {
+    return 1;
+  }
+
+  if (range === "1w") {
+    return 7;
+  }
+
+  if (range === "1m") {
+    return 30;
+  }
+
+  if (range === "1y") {
+    return 365;
+  }
+
+  return null;
+}
+
+function filterBloodPressureReadingsByRange(readings: BloodPressureReading[], range: BloodPressureRange) {
+  const windowDays = getRangeWindowDays(range);
+
+  if (windowDays === null) {
+    return readings;
+  }
+
+  const cutoff = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+
+  return readings.filter((reading) => new Date(reading.measured_at).getTime() >= cutoff);
+}
+
 function ChipButton({
   active,
   children,
@@ -202,38 +256,67 @@ function ChipButton({
 
 function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) {
   const chronological = getChronologicalReadings(readings);
-  const averageReading = getAverageReading(chronological);
-  const latestReading = chronological[chronological.length - 1] ?? null;
+  const [timeRange, setTimeRange] = useState<BloodPressureRange>("all");
   const [selectedReadingId, setSelectedReadingId] = useState<string | null>(null);
+  const rangeReadings = filterBloodPressureReadingsByRange(chronological, timeRange);
+  const averageReading = getAverageReading(rangeReadings);
+  const latestReading = rangeReadings[rangeReadings.length - 1] ?? null;
 
   useEffect(() => {
-    if (chronological.length === 0) {
+    if (rangeReadings.length === 0) {
       setSelectedReadingId(null);
       return;
     }
 
     setSelectedReadingId((current) => {
-      if (current && chronological.some((reading) => reading.id === current)) {
+      if (current && rangeReadings.some((reading) => reading.id === current)) {
         return current;
       }
 
-      return latestReading?.id ?? chronological[chronological.length - 1].id;
+      return latestReading?.id ?? rangeReadings[rangeReadings.length - 1].id;
     });
-  }, [chronological, latestReading?.id]);
+  }, [rangeReadings, latestReading?.id]);
 
   if (chronological.length === 0) {
     return <p className="status">No chart data yet.</p>;
+  }
+
+  if (rangeReadings.length === 0) {
+    return (
+      <div className="chart">
+        {latestReading ? (
+          <div className="chart-hero">
+            <div>
+              <p className="chart-hero-label">Latest reading</p>
+              <p className="chart-hero-value">
+                {formatReadingLabel(latestReading)} <span>mmHg</span>
+              </p>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="chart-ranges" role="tablist" aria-label="Chart time range">
+          {(["1d", "1w", "1m", "1y", "all"] as BloodPressureRange[]).map((range) => (
+            <ChipButton key={range} active={timeRange === range} onClick={() => setTimeRange(range)}>
+              {getRangeLabel(range)}
+            </ChipButton>
+          ))}
+        </div>
+
+        <p className="status">No readings in this range yet.</p>
+      </div>
+    );
   }
 
   const width = 640;
   const height = 324;
   const padding = 32;
   const axisY = height - 34;
-  const allValues = chronological.flatMap((reading) => [reading.systolic, reading.diastolic]);
+  const allValues = rangeReadings.flatMap((reading) => [reading.systolic, reading.diastolic]);
   const minValue = Math.min(...allValues) - 10;
   const maxValue = Math.max(...allValues) + 10;
   const systolicPoints = buildChartPoints(
-    chronological,
+    rangeReadings,
     (reading) => reading.systolic,
     width,
     height,
@@ -242,7 +325,7 @@ function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) 
     maxValue,
   );
   const diastolicPoints = buildChartPoints(
-    chronological,
+    rangeReadings,
     (reading) => reading.diastolic,
     width,
     height,
@@ -251,9 +334,9 @@ function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) 
     maxValue,
   );
   const yTicks = [maxValue, (maxValue + minValue) / 2, minValue];
-  const axisTickIndexes = getChartAxisTickIndexes(chronological.length);
+  const axisTickIndexes = getChartAxisTickIndexes(rangeReadings.length);
   const selectedReading =
-    chronological.find((reading) => reading.id === selectedReadingId) ?? latestReading;
+    rangeReadings.find((reading) => reading.id === selectedReadingId) ?? latestReading;
 
   function handleReadingSelect(readingId: string) {
     setSelectedReadingId(readingId);
@@ -286,6 +369,14 @@ function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) 
         </div>
       ) : null}
 
+      <div className="chart-ranges" role="tablist" aria-label="Chart time range">
+        {(["1d", "1w", "1m", "1y", "all"] as BloodPressureRange[]).map((range) => (
+          <ChipButton key={range} active={timeRange === range} onClick={() => setTimeRange(range)}>
+            {getRangeLabel(range)}
+          </ChipButton>
+        ))}
+      </div>
+
       <div className="chart-meta">
         <div className="chart-legend">
           <span>
@@ -313,6 +404,9 @@ function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) 
       </div>
 
       <div className="chart-stage">
+        <div className="chart-range-status" aria-live="polite">
+          Showing {rangeReadings.length} reading{rangeReadings.length === 1 ? "" : "s"} for {getRangeLabel(timeRange)}
+        </div>
         <svg
           aria-label="Blood pressure readings over time"
           className="chart-svg"
@@ -333,7 +427,7 @@ function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) 
             );
           })}
 
-          {chronological.map((reading, index) => {
+          {rangeReadings.map((reading, index) => {
             const systolicPoint = systolicPoints[index];
             const diastolicPoint = diastolicPoints[index];
             const topY = Math.min(systolicPoint.y, diastolicPoint.y);
@@ -382,7 +476,7 @@ function BloodPressureChart({ readings }: { readings: BloodPressureReading[] }) 
           <path className="chart-line chart-line-diastolic" d={pointsToPath(diastolicPoints)} />
 
           {axisTickIndexes.map((index) => {
-            const point = chronological[index];
+            const point = rangeReadings[index];
             const chartPoint = systolicPoints[index];
 
             return (

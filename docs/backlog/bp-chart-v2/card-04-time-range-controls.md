@@ -17,6 +17,10 @@ Define the time filtering UX for the chart.
 - There are no confusing intermediate states
 - The control row fits naturally into the chart layout
 
+## Status
+
+- Done
+
 ## Notes
 
 - Keep the control set compact and easy to scan on mobile

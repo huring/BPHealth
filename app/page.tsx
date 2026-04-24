@@ -40,10 +40,7 @@ type ChartPoint = {
   y: number;
 };
 
-type AverageReading = {
-  systolic: number;
-  diastolic: number;
-};
+type BloodPressureLevel = "low" | "normal" | "elevated" | "high" | "very-high";
 
 type BloodPressureRange = "1d" | "1w" | "1m" | "1y" | "all";
 
@@ -263,18 +260,29 @@ function formatChartAxisLabel(measuredAt: string) {
   }).format(new Date(measuredAt));
 }
 
-function getAverageReading(readings: BloodPressureReading[]) {
-  if (readings.length === 0) {
-    return null;
+function getBloodPressureLevel(reading: BloodPressureReading): BloodPressureLevel {
+  if (reading.systolic >= 160 || reading.diastolic >= 100) {
+    return "very-high";
   }
 
-  const totalSystolic = readings.reduce((sum, reading) => sum + reading.systolic, 0);
-  const totalDiastolic = readings.reduce((sum, reading) => sum + reading.diastolic, 0);
+  if (reading.systolic >= 140 || reading.diastolic >= 90) {
+    return "high";
+  }
 
-  return {
-    systolic: Math.round(totalSystolic / readings.length),
-    diastolic: Math.round(totalDiastolic / readings.length),
-  } satisfies AverageReading;
+  if (reading.systolic >= 120 || reading.diastolic >= 80) {
+    return "elevated";
+  }
+
+  if (reading.systolic < 90 || reading.diastolic < 60) {
+    return "low";
+  }
+
+  return "normal";
+}
+
+function formatLatestReadingDayLabel(measuredAt: string) {
+  const date = new Date(measuredAt);
+  return getRelativeDayLabel(date) ?? formatPrettyDate(date, false, false);
 }
 
 function getChartAxisTickIndexes(length: number, maxTicks = 5) {
@@ -361,6 +369,162 @@ function ChipButton({
     >
       {children}
     </button>
+  );
+}
+
+function LatestReadingCard({
+  readings,
+  measurementTagsByReadingId,
+  isLoading,
+}: {
+  readings: BloodPressureReading[];
+  measurementTagsByReadingId: Record<string, MeasurementTagRow[]>;
+  isLoading: boolean;
+}) {
+  const chronologicalReadings = getChronologicalReadings(readings);
+  const demoReading: BloodPressureReading = {
+    id: "demo-latest-reading",
+    systolic: 150,
+    diastolic: 112,
+    measured_at: new Date().toISOString(),
+  };
+  const [selectedReadingId, setSelectedReadingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (chronologicalReadings.length === 0) {
+      setSelectedReadingId(null);
+      return;
+    }
+
+    const latestReadingId = chronologicalReadings[chronologicalReadings.length - 1]?.id ?? null;
+    if (!latestReadingId) {
+      setSelectedReadingId(null);
+      return;
+    }
+
+    setSelectedReadingId((current) =>
+      current && chronologicalReadings.some((reading) => reading.id === current)
+        ? current
+        : latestReadingId,
+    );
+  }, [readings]);
+
+  const selectedReading =
+    !isLoading && selectedReadingId && chronologicalReadings.length > 0
+      ? chronologicalReadings.find((reading) => reading.id === selectedReadingId) ?? null
+      : null;
+  const visibleReading = isLoading
+    ? null
+    : selectedReading ?? chronologicalReadings[chronologicalReadings.length - 1] ?? demoReading;
+  const currentReading = visibleReading ?? demoReading;
+  const readingLevel = visibleReading ? getBloodPressureLevel(visibleReading) : "normal";
+  const latestChronologicalReading = chronologicalReadings[chronologicalReadings.length - 1] ?? null;
+  const isLatestReading =
+    isLoading ||
+    chronologicalReadings.length === 0 ||
+    Boolean(latestChronologicalReading && currentReading.id === latestChronologicalReading.id);
+  const readingTags =
+    isLoading
+      ? []
+      : chronologicalReadings.length === 0
+      ? ["HEMMA", "MORGON"]
+      : (measurementTagsByReadingId[currentReading.id] ?? []).map((tag) => tag.name.toUpperCase());
+  const visibleReadingIndex = visibleReading
+    ? chronologicalReadings.findIndex((reading) => reading.id === visibleReading.id)
+    : -1;
+  const hasPrevious = !isLoading && chronologicalReadings.length > 0 && visibleReadingIndex > 0;
+  const hasNext =
+    !isLoading &&
+    chronologicalReadings.length > 0 &&
+    visibleReadingIndex >= 0 &&
+    visibleReadingIndex < chronologicalReadings.length - 1;
+  const readingDayLabel = visibleReading ? formatLatestReadingDayLabel(currentReading.measured_at) : "Loading";
+
+  function showPreviousReading() {
+    if (!hasPrevious) {
+      return;
+    }
+
+    setSelectedReadingId(chronologicalReadings[visibleReadingIndex - 1].id);
+  }
+
+  function showNextReading() {
+    if (!hasNext) {
+      return;
+    }
+
+    setSelectedReadingId(chronologicalReadings[visibleReadingIndex + 1].id);
+  }
+
+  return (
+    <section className="latest-reading-shell" aria-label="Latest blood pressure reading">
+      <div className={`latest-reading-card latest-reading-card--${readingLevel}`}>
+        <button
+          aria-label="Previous measurement"
+          className="latest-reading-arrow latest-reading-arrow-left"
+          disabled={!hasPrevious}
+          type="button"
+          onClick={showPreviousReading}
+        >
+          ←
+        </button>
+
+        <button
+          aria-label="Next measurement"
+          className="latest-reading-arrow latest-reading-arrow-right"
+          disabled={!hasNext}
+          type="button"
+          onClick={showNextReading}
+        >
+          →
+        </button>
+
+        <div className="latest-reading-header">
+          <p className="latest-reading-kicker">{isLatestReading ? "LATEST READING" : "READING"}</p>
+          <p className="latest-reading-day" suppressHydrationWarning>
+            {readingDayLabel}
+          </p>
+        </div>
+
+        <div className="latest-reading-body">
+          <div className="latest-reading-row">
+            <span className="latest-reading-label">Systolic</span>
+            <div className="latest-reading-value-row">
+              <span className="latest-reading-dot" aria-hidden="true" />
+              <strong className="latest-reading-value latest-reading-value-systolic">
+                {visibleReading ? visibleReading.systolic : "--"}
+              </strong>
+              <span className="latest-reading-unit">mmHg</span>
+            </div>
+          </div>
+
+          <div className="latest-reading-row">
+            <span className="latest-reading-label">Diastolic</span>
+            <div className="latest-reading-value-row">
+              <span className="latest-reading-dot" aria-hidden="true" />
+              <strong className="latest-reading-value latest-reading-value-diastolic">
+                {visibleReading ? visibleReading.diastolic : "--"}
+              </strong>
+              <span className="latest-reading-unit">mmHg</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="latest-reading-tags" aria-label="Measurement tags">
+          {readingTags.map((tag) => (
+            <span key={tag} className="latest-reading-tag">
+              {tag}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="latest-reading-indicator" aria-hidden="true">
+        <span className="latest-reading-indicator-dot latest-reading-indicator-dot-active" />
+        <span className="latest-reading-indicator-dot" />
+        <span className="latest-reading-indicator-dot" />
+      </div>
+    </section>
   );
 }
 
@@ -699,7 +863,7 @@ function BloodPressureChart({
   }
 
   const width = 640;
-  const height = 352;
+  const height = 448;
   const padding = 48;
   const axisY = height - 34;
   const innerWidth = width - padding * 2;
@@ -758,20 +922,6 @@ function BloodPressureChart({
 
   return (
     <div className="chart">
-      <div className="chart-ranges segmented" role="radiogroup" aria-label="Chart time range">
-        {(["1d", "1w", "1m", "1y", "all"] as BloodPressureRange[]).map((range) => (
-          <button
-            key={range}
-            aria-pressed={timeRange === range}
-            className={`segmented-option${timeRange === range ? " segmented-option-active" : ""}`}
-            type="button"
-            onClick={() => onTimeRangeChange(range)}
-          >
-            {getRangeLabel(range)}
-          </button>
-        ))}
-      </div>
-
       <div className="chart-stage">
         {selectedReading && selectedChipPosition ? (
           <button
@@ -897,6 +1047,20 @@ function BloodPressureChart({
           })}
         </svg>
       </div>
+
+      <div className="chart-ranges segmented" role="radiogroup" aria-label="Chart time range">
+        {(["1d", "1w", "1m", "1y", "all"] as BloodPressureRange[]).map((range) => (
+          <button
+            key={range}
+            aria-pressed={timeRange === range}
+            className={`segmented-option${timeRange === range ? " segmented-option-active" : ""}`}
+            type="button"
+            onClick={() => onTimeRangeChange(range)}
+          >
+            {getRangeLabel(range)}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -947,12 +1111,6 @@ export default function HomePage() {
   );
   const recentReadings = [...filteredChronologicalReadings].reverse();
   const rangeReadings = filterBloodPressureReadingsByRange(filteredChronologicalReadings, chartRange);
-  const latestReading = rangeReadings[rangeReadings.length - 1] ?? null;
-  const averageReading = getAverageReading(rangeReadings);
-  const latestSystolic = latestReading ? latestReading.systolic : "--";
-  const latestDiastolic = latestReading ? latestReading.diastolic : "--";
-  const averageSystolic = averageReading ? averageReading.systolic : "--";
-  const averageDiastolic = averageReading ? averageReading.diastolic : "--";
   const filteredTagCount = selectedFilterTagIds.length;
   const filteredTagLabel =
     filteredTagCount === 0
@@ -1348,36 +1506,11 @@ export default function HomePage() {
     <main className="shell app-shell">
       <InstallPrompt />
       <div className="dashboard-top">
-        <header className="page-hero" id="latest">
-          <div className="page-hero-stats" aria-label="Latest and average blood pressure">
-            <div className={`hero-stat${latestReading ? "" : " hero-stat-placeholder"}`}>
-              <span className="hero-stat-label">Latest</span>
-              <strong className="hero-stat-value">
-                <span className="bp-systolic">{latestSystolic}</span>
-                <span className="bp-separator">/</span>
-                <span className="bp-diastolic">{latestDiastolic}</span>
-              </strong>
-              <span className="hero-stat-unit">mmHg</span>
-              <span className="hero-stat-footnote" suppressHydrationWarning>
-                {latestReading ? formatReadingTime(latestReading.measured_at, isMounted) : "No latest reading"}
-              </span>
-            </div>
-
-            <div className={`hero-stat${averageReading ? "" : " hero-stat-placeholder"}`}>
-              <span className="hero-stat-label">Average</span>
-              <strong className="hero-stat-value">
-                <span className="bp-systolic">{averageSystolic}</span>
-                <span className="bp-separator">/</span>
-                <span className="bp-diastolic">{averageDiastolic}</span>
-              </strong>
-              <span className="hero-stat-unit">mmHg</span>
-              <span className="hero-stat-footnote" suppressHydrationWarning>
-                Based on {rangeReadings.length} readings
-              </span>
-            </div>
-          </div>
-          {!latestReading ? <p className="page-hero-note">No readings yet.</p> : null}
-        </header>
+        <LatestReadingCard
+          readings={chronologicalReadings}
+          measurementTagsByReadingId={measurementTagsByReadingId}
+          isLoading={isLoading}
+        />
 
         <section className="page-section" id="chart">
           {isLoading ? (

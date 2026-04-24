@@ -159,7 +159,10 @@ function filterReadingsByTags(
 }
 
 function getVisibleMeasurementTags(measurementTags: MeasurementTagRow[]) {
-  return measurementTags.filter((tag) => !isAutomaticMeasurementTagName(tag.name));
+  return measurementTags
+    .filter((tag) => !isAutomaticMeasurementTagName(tag.name))
+    .slice()
+    .sort((left, right) => left.created_at.localeCompare(right.created_at));
 }
 
 function getMeasurementTagCountsById(assignments: MeasurementTagAssignmentRow[]) {
@@ -374,10 +377,11 @@ function BloodPressureEntryModal({
   measuredDay,
   setMeasuredDay,
   measurementTags,
-  measurementTagCountsById,
   selectedTagIds,
   tagDraft,
   setTagDraft,
+  isTagDraftOpen,
+  setIsTagDraftOpen,
   tagStatus,
   onCreateTag,
   onToggleTag,
@@ -396,10 +400,11 @@ function BloodPressureEntryModal({
   measuredDay: string;
   setMeasuredDay: (value: string) => void;
   measurementTags: MeasurementTagRow[];
-  measurementTagCountsById: Record<string, number>;
   selectedTagIds: string[];
   tagDraft: string;
   setTagDraft: (value: string) => void;
+  isTagDraftOpen: boolean;
+  setIsTagDraftOpen: (value: boolean) => void;
   tagStatus: string | null;
   onCreateTag: () => void;
   onToggleTag: (tagId: string) => void;
@@ -410,7 +415,6 @@ function BloodPressureEntryModal({
   const diastolicInputRef = useRef<HTMLInputElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
   const manualMeasurementTags = measurementTags.filter((tag) => !isAutomaticMeasurementTagName(tag.name));
-  const selectedTags = manualMeasurementTags.filter((tag) => selectedTagIds.includes(tag.id));
   const isToday = isTodayDateInputValue(measuredDay);
 
   useEffect(() => {
@@ -426,6 +430,20 @@ function BloodPressureEntryModal({
       window.cancelAnimationFrame(raf);
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !isTagDraftOpen) {
+      return;
+    }
+
+    const raf = window.requestAnimationFrame(() => {
+      tagInputRef.current?.focus();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(raf);
+    };
+  }, [isOpen, isTagDraftOpen]);
 
   if (!isMounted) {
     return null;
@@ -546,69 +564,16 @@ function BloodPressureEntryModal({
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
                       event.preventDefault();
-                      tagInputRef.current?.focus();
+                      setIsTagDraftOpen(true);
                     }
                   }}
                 />
               </label>
             </div>
 
-            <div className="chip-stack" aria-label="Measurement tags">
-              <div className="tag-header-row">
-                <span className="field-label">Tags</span>
-                <span className="tag-count">{selectedTags.length} selected</span>
-              </div>
-              <p className="tag-help">Tap chips to select tags for this measurement. Add a new one if needed.</p>
-
-              <div className="tag-entry-row">
-                <input
-                  ref={tagInputRef}
-                  aria-label="Add a tag"
-                  autoComplete="off"
-                  className="tag-input"
-                  enterKeyHint="done"
-                  placeholder="Add a tag"
-                  type="text"
-                  value={tagDraft}
-                  onChange={(event) => setTagDraft(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      onCreateTag();
-                    }
-                  }}
-                />
-                <button
-                  className="tag-add-button"
-                  type="button"
-                  disabled={!supabaseConfigured || isSaving}
-                  onClick={onCreateTag}
-                >
-                  Add tag
-                </button>
-              </div>
+            <div className="chip-stack tag-chip-stack" aria-label="Measurement tags">
               {tagStatus ? <p className="status tag-status">{tagStatus}</p> : null}
-              {selectedTags.length > 0 ? (
-                <div className="tag-group">
-                  <span className="tag-section-label">Selected</span>
-                  <div className="chip-row tag-chip-cloud">
-                    {selectedTags.map((tag) => (
-                      <ChipButton
-                        key={tag.id}
-                        active
-                        className="chip-tag"
-                        onClick={() => onToggleTag(tag.id)}
-                      >
-                        <span className="chip-label">{tag.name}</span>
-                        <span className="chip-count-badge">{measurementTagCountsById[tag.id] ?? 0}</span>
-                      </ChipButton>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="tag-group">
-                <span className="tag-section-label">All tags</span>
+              <div className="tag-inline-row">
                 <div className="chip-row tag-chip-cloud">
                   {manualMeasurementTags.length === 0 ? (
                     <p className="status tag-empty">No tags yet. Add one to get started.</p>
@@ -621,11 +586,44 @@ function BloodPressureEntryModal({
                         onClick={() => onToggleTag(tag.id)}
                       >
                         <span className="chip-label">{tag.name}</span>
-                        <span className="chip-count-badge">{measurementTagCountsById[tag.id] ?? 0}</span>
                       </ChipButton>
                     ))
                   )}
                 </div>
+                {isTagDraftOpen ? (
+                  <input
+                    ref={tagInputRef}
+                    aria-label="Add a tag"
+                    autoComplete="off"
+                    className="tag-input tag-input-inline"
+                    enterKeyHint="done"
+                    placeholder="New tag"
+                    type="text"
+                    value={tagDraft}
+                    onChange={(event) => setTagDraft(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        onCreateTag();
+                      }
+
+                      if (event.key === "Escape") {
+                        event.preventDefault();
+                        setIsTagDraftOpen(false);
+                        setTagDraft("");
+                      }
+                    }}
+                  />
+                ) : null}
+                <button
+                  className="tag-plus-button"
+                  type="button"
+                  disabled={!supabaseConfigured || isSaving}
+                  aria-label={isTagDraftOpen ? "Add tag input open" : "Add tag"}
+                  onClick={() => setIsTagDraftOpen(true)}
+                >
+                  +
+                </button>
               </div>
             </div>
 
@@ -915,6 +913,7 @@ export default function HomePage() {
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [selectedFilterTagIds, setSelectedFilterTagIds] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
+  const [isTagDraftOpen, setIsTagDraftOpen] = useState(false);
   const [tagStatus, setTagStatus] = useState<string | null>(null);
   const [chartRange, setChartRange] = useState<BloodPressureRange>("all");
   const [status, setStatus] = useState<string | null>(null);
@@ -1088,6 +1087,7 @@ export default function HomePage() {
     setMeasuredDay(toDateInputValue(new Date()));
     setSelectedTagIds([]);
     setTagDraft("");
+    setIsTagDraftOpen(false);
     setTagStatus(null);
     setStatus(null);
     setIsAddModalMounted(true);
@@ -1095,6 +1095,7 @@ export default function HomePage() {
 
   function closeAddModal() {
     setIsAddModalOpen(false);
+    setIsTagDraftOpen(false);
 
     if (addModalCloseTimer.current !== null) {
       window.clearTimeout(addModalCloseTimer.current);
@@ -1159,8 +1160,11 @@ export default function HomePage() {
     );
 
     if (existingTag) {
-      setTagDraft(existingTag.name);
-      setTagStatus("That tag already exists.");
+      setSelectedTagIds((current) =>
+        current.includes(existingTag.id) ? current : [...current, existingTag.id],
+      );
+      setTagDraft("");
+      setIsTagDraftOpen(false);
       return;
     }
 
@@ -1188,7 +1192,7 @@ export default function HomePage() {
         );
       }
       setTagDraft("");
-      setTagStatus("Tag saved.");
+      setIsTagDraftOpen(false);
     } catch (error) {
       setTagStatus(error instanceof Error ? error.message : "Unable to save tag.");
     }
@@ -1329,6 +1333,7 @@ export default function HomePage() {
       setDiastolic("");
       setMeasuredDay(toDateInputValue(new Date()));
       setSelectedTagIds([]);
+      setIsTagDraftOpen(false);
       closeAddModal();
       await reloadReadings();
     } catch (error) {
@@ -1512,10 +1517,11 @@ export default function HomePage() {
         measuredDay={measuredDay}
         setMeasuredDay={setMeasuredDay}
         measurementTags={measurementTags}
-        measurementTagCountsById={measurementTagCountsById}
         selectedTagIds={selectedTagIds}
         tagDraft={tagDraft}
         setTagDraft={setTagDraft}
+        isTagDraftOpen={isTagDraftOpen}
+        setIsTagDraftOpen={setIsTagDraftOpen}
         tagStatus={tagStatus}
         onCreateTag={() => void handleCreateMeasurementTag()}
         onToggleTag={handleToggleMeasurementTag}

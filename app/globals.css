@@ -967,23 +967,23 @@ button:focus-visible {
   content: none;
 }
 
-.latest-reading-card--low {
+.latest-reading-row--low {
   --latest-reading-dot: #60a5fa;
 }
 
-.latest-reading-card--normal {
+.latest-reading-row--normal {
   --latest-reading-dot: #22c55e;
 }
 
-.latest-reading-card--elevated {
+.latest-reading-row--elevated {
   --latest-reading-dot: #facc15;
 }
 
-.latest-reading-card--high {
-  --latest-reading-dot: #d11f1f;
+.latest-reading-row--high {
+  --latest-reading-dot: #f97316;
 }
 
-.latest-reading-card--very-high {
+.latest-reading-row--very-high {
   --latest-reading-dot: #ef4444;
 }
 

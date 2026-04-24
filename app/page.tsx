@@ -260,20 +260,43 @@ function formatChartAxisLabel(measuredAt: string) {
   }).format(new Date(measuredAt));
 }
 
-function getBloodPressureLevel(reading: BloodPressureReading): BloodPressureLevel {
-  if (reading.systolic >= 160 || reading.diastolic >= 100) {
+function getBloodPressureLevelForValue(
+  value: number,
+  kind: "systolic" | "diastolic",
+): BloodPressureLevel {
+  if (kind === "systolic") {
+    if (value >= 160) {
+      return "very-high";
+    }
+
+    if (value >= 140) {
+      return "high";
+    }
+
+    if (value >= 120) {
+      return "elevated";
+    }
+
+    if (value < 90) {
+      return "low";
+    }
+
+    return "normal";
+  }
+
+  if (value >= 100) {
     return "very-high";
   }
 
-  if (reading.systolic >= 140 || reading.diastolic >= 90) {
+  if (value >= 90) {
     return "high";
   }
 
-  if (reading.systolic >= 120 || reading.diastolic >= 80) {
+  if (value >= 80) {
     return "elevated";
   }
 
-  if (reading.systolic < 90 || reading.diastolic < 60) {
+  if (value < 60) {
     return "low";
   }
 
@@ -417,12 +440,13 @@ function LatestReadingCard({
     ? null
     : selectedReading ?? chronologicalReadings[chronologicalReadings.length - 1] ?? demoReading;
   const currentReading = visibleReading ?? demoReading;
-  const readingLevel = visibleReading ? getBloodPressureLevel(visibleReading) : "normal";
   const latestChronologicalReading = chronologicalReadings[chronologicalReadings.length - 1] ?? null;
   const isLatestReading =
     isLoading ||
     chronologicalReadings.length === 0 ||
     Boolean(latestChronologicalReading && currentReading.id === latestChronologicalReading.id);
+  const systolicLevel = getBloodPressureLevelForValue(currentReading.systolic, "systolic");
+  const diastolicLevel = getBloodPressureLevelForValue(currentReading.diastolic, "diastolic");
   const readingTags =
     isLoading
       ? []
@@ -458,7 +482,7 @@ function LatestReadingCard({
 
   return (
     <section className="latest-reading-shell" aria-label="Latest blood pressure reading">
-      <div className={`latest-reading-card latest-reading-card--${readingLevel}`}>
+      <div className="latest-reading-card">
         <button
           aria-label="Previous measurement"
           className="latest-reading-arrow latest-reading-arrow-left"
@@ -487,7 +511,7 @@ function LatestReadingCard({
         </div>
 
         <div className="latest-reading-body">
-          <div className="latest-reading-row">
+          <div className={`latest-reading-row latest-reading-row--${systolicLevel}`}>
             <span className="latest-reading-label">Systolic</span>
             <div className="latest-reading-value-row">
               <span className="latest-reading-dot" aria-hidden="true" />
@@ -498,7 +522,7 @@ function LatestReadingCard({
             </div>
           </div>
 
-          <div className="latest-reading-row">
+          <div className={`latest-reading-row latest-reading-row--${diastolicLevel}`}>
             <span className="latest-reading-label">Diastolic</span>
             <div className="latest-reading-value-row">
               <span className="latest-reading-dot" aria-hidden="true" />

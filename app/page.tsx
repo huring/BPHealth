@@ -945,6 +945,7 @@ export default function HomePage() {
     selectedFilterTagIds,
     measurementTagIdsByReadingId,
   );
+  const recentReadings = [...filteredChronologicalReadings].reverse();
   const rangeReadings = filterBloodPressureReadingsByRange(filteredChronologicalReadings, chartRange);
   const latestReading = rangeReadings[rangeReadings.length - 1] ?? null;
   const averageReading = getAverageReading(rangeReadings);
@@ -1466,7 +1467,7 @@ export default function HomePage() {
           </p>
         ) : (
           <ul className="history-list">
-            {filteredChronologicalReadings.map((reading) => {
+            {recentReadings.map((reading) => {
               const readingTags = measurementTagsByReadingId[reading.id] ?? [];
 
               return (

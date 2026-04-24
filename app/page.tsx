@@ -699,7 +699,7 @@ function BloodPressureChart({
   }
 
   const width = 640;
-  const height = 324;
+  const height = 352;
   const padding = 48;
   const axisY = height - 34;
   const innerWidth = width - padding * 2;
@@ -1346,49 +1346,69 @@ export default function HomePage() {
   return (
     <main className="shell app-shell">
       <InstallPrompt />
-      <header className="page-hero" id="latest">
-        <div className="page-hero-stats" aria-label="Latest and average blood pressure">
-          <div className={`hero-stat${latestReading ? "" : " hero-stat-placeholder"}`}>
-            <span className="hero-stat-label">Latest</span>
-            <strong className="hero-stat-value">
-              <span className="bp-systolic">{latestSystolic}</span>
-              <span className="bp-separator">/</span>
-              <span className="bp-diastolic">{latestDiastolic}</span>
-            </strong>
-            <span className="hero-stat-unit">mmHg</span>
-            <span className="hero-stat-footnote" suppressHydrationWarning>
-              {latestReading ? formatReadingTime(latestReading.measured_at, isMounted) : "No latest reading"}
-            </span>
-          </div>
+      <div className="dashboard-top">
+        <header className="page-hero" id="latest">
+          <div className="page-hero-stats" aria-label="Latest and average blood pressure">
+            <div className={`hero-stat${latestReading ? "" : " hero-stat-placeholder"}`}>
+              <span className="hero-stat-label">Latest</span>
+              <strong className="hero-stat-value">
+                <span className="bp-systolic">{latestSystolic}</span>
+                <span className="bp-separator">/</span>
+                <span className="bp-diastolic">{latestDiastolic}</span>
+              </strong>
+              <span className="hero-stat-unit">mmHg</span>
+              <span className="hero-stat-footnote" suppressHydrationWarning>
+                {latestReading ? formatReadingTime(latestReading.measured_at, isMounted) : "No latest reading"}
+              </span>
+            </div>
 
-          <div className={`hero-stat${averageReading ? "" : " hero-stat-placeholder"}`}>
-            <span className="hero-stat-label">Average</span>
-            <strong className="hero-stat-value">
-              <span className="bp-systolic">{averageSystolic}</span>
-              <span className="bp-separator">/</span>
-              <span className="bp-diastolic">{averageDiastolic}</span>
-            </strong>
-            <span className="hero-stat-unit">mmHg</span>
-            <span className="hero-stat-footnote" suppressHydrationWarning>
-              Based on {rangeReadings.length} readings
-            </span>
+            <div className={`hero-stat${averageReading ? "" : " hero-stat-placeholder"}`}>
+              <span className="hero-stat-label">Average</span>
+              <strong className="hero-stat-value">
+                <span className="bp-systolic">{averageSystolic}</span>
+                <span className="bp-separator">/</span>
+                <span className="bp-diastolic">{averageDiastolic}</span>
+              </strong>
+              <span className="hero-stat-unit">mmHg</span>
+              <span className="hero-stat-footnote" suppressHydrationWarning>
+                Based on {rangeReadings.length} readings
+              </span>
+            </div>
           </div>
-        </div>
-        {!latestReading ? <p className="page-hero-note">No readings yet.</p> : null}
-      </header>
+          {!latestReading ? <p className="page-hero-note">No readings yet.</p> : null}
+        </header>
 
-      <section className="page-section" id="chart">
-        {isLoading ? (
-          <p className="status">Loading chart...</p>
-        ) : (
-          <BloodPressureChart
-            readings={readings}
-            timeRange={chartRange}
-            onTimeRangeChange={setChartRange}
-            preferRelativeDates={isMounted}
-          />
-        )}
-      </section>
+        <section className="page-section" id="chart">
+          {isLoading ? (
+            <p className="status">Loading chart...</p>
+          ) : (
+            <BloodPressureChart
+              readings={readings}
+              timeRange={chartRange}
+              onTimeRangeChange={setChartRange}
+              preferRelativeDates={isMounted}
+            />
+          )}
+        </section>
+
+        <section className="page-section" id="add">
+          {!supabaseConfigured ? (
+            <p className="status">
+              Supabase environment variables are missing. Add `NEXT_PUBLIC_SUPABASE_URL`
+              and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to enable saving and history.
+            </p>
+          ) : null}
+          <button
+            ref={addMeasurementButtonRef}
+            className="add-measurement-button"
+            type="button"
+            onClick={openAddModal}
+          >
+            Add measurement
+          </button>
+          {!isAddModalMounted && status ? <p className="status">{status}</p> : null}
+        </section>
+      </div>
 
       <details className="page-section tag-filter-panel">
         <summary>
@@ -1423,7 +1443,7 @@ export default function HomePage() {
                         : [...current, tag.id],
                     )
                   }
-                  >
+                >
                   <span className="chip-label">{tag.name}</span>
                   <span className="chip-count-badge">{measurementTagCountsById[tag.id] ?? 0}</span>
                 </ChipButton>
@@ -1432,24 +1452,6 @@ export default function HomePage() {
           )}
         </div>
       </details>
-
-      <section className="page-section" id="add">
-        {!supabaseConfigured ? (
-          <p className="status">
-            Supabase environment variables are missing. Add `NEXT_PUBLIC_SUPABASE_URL`
-            and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to enable saving and history.
-          </p>
-        ) : null}
-        <button
-          ref={addMeasurementButtonRef}
-          className="add-measurement-button"
-          type="button"
-          onClick={openAddModal}
-        >
-          Add measurement
-        </button>
-        {!isAddModalMounted && status ? <p className="status">{status}</p> : null}
-      </section>
 
       <details className="page-section history-panel" id="history">
         <summary>

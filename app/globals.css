@@ -22,6 +22,7 @@ body {
 html {
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -29,6 +30,7 @@ body {
   color: var(--ink);
   min-height: 100dvh;
   overflow-x: hidden;
+  overflow-y: scroll;
   overscroll-behavior-y: none;
   background:
     radial-gradient(circle at top left, rgba(70, 104, 139, 0.24), transparent 28%),
@@ -315,6 +317,8 @@ button:focus-visible {
 .tag-filter-panel {
   padding-top: 0;
   scroll-margin-top: 12px;
+  margin-top: 6px;
+  margin-bottom: 4px;
 }
 
 .tag-filter-panel > summary {
@@ -525,6 +529,7 @@ button:focus-visible {
 .history-panel {
   padding-top: 0;
   scroll-margin-top: 12px;
+  margin-top: 0;
 }
 
 .history-panel > summary {
@@ -536,7 +541,7 @@ button:focus-visible {
   gap: 12px;
   min-height: 44px;
   padding: 0 0 12px;
-  margin: 0 0 12px;
+  margin: 0 0 8px;
   user-select: none;
   border-bottom: 1px solid var(--line);
   transition: opacity 120ms ease, transform 120ms ease;
@@ -932,6 +937,7 @@ button:focus-visible {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   min-width: 0;
+  align-items: stretch;
 }
 
 .hero-stat {
@@ -941,6 +947,7 @@ button:focus-visible {
   text-align: center;
   position: relative;
   min-width: 0;
+  min-height: 132px;
   padding: 14px 14px 13px;
   border: 1px solid var(--line);
   border-radius: 20px;
@@ -1008,6 +1015,15 @@ button:focus-visible {
   margin: 0;
   color: var(--muted);
   font-size: 0.95rem;
+}
+
+.dashboard-top {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  height: clamp(560px, 68dvh, 760px);
+  align-content: start;
+  overflow: clip;
 }
 
 .page-section {
@@ -1178,6 +1194,7 @@ button:focus-visible {
 }
 
 .chart-ranges.segmented {
+  display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 2px;
   padding: 2px;
@@ -1185,6 +1202,8 @@ button:focus-visible {
   border-radius: 12px;
   background: rgba(5, 8, 12, 0.88);
   box-shadow: none;
+  align-items: stretch;
+  min-height: 38px;
 }
 
 .segmented-option {
@@ -1201,11 +1220,23 @@ button:focus-visible {
 }
 
 .chart-ranges.segmented .segmented-option {
-  min-height: 18px;
-  padding: 3px 4px;
+  min-height: 30px;
+  padding: 6px 4px 7px;
   font-size: 0.64rem;
   line-height: 1;
   border-radius: 8px;
+}
+
+.chart {
+  gap: 14px;
+}
+
+.chart-stage {
+  min-height: 352px;
+}
+
+.chart-stage .chart-svg {
+  min-height: 352px;
 }
 
 .segmented-option-active {

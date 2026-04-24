@@ -424,57 +424,52 @@ button:focus-visible {
   font-size: 0.82rem;
 }
 
-.date-picker-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: center;
-}
-
-.date-picker-button,
 .date-step-button {
-  min-height: 44px;
-  border-radius: 14px;
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.04);
+  min-height: 38px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--ink);
   font: inherit;
   font-weight: 700;
 }
 
 .date-step-button {
-  width: 44px;
+  width: 38px;
   padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.date-picker-button {
-  width: 100%;
-  padding: 0 14px;
-  text-align: left;
-  background: rgba(124, 169, 224, 0.08);
+.date-step-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
-.date-picker-button:focus-visible,
-.date-step-button:focus-visible {
-  outline: 2px solid rgba(124, 169, 224, 0.45);
-  outline-offset: 2px;
-}
-
-.date-picker-button:active,
 .date-step-button:active {
   transform: translateY(1px) scale(0.99);
 }
 
-.date-native-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
+.date-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.date-label {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
   border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 700;
+  line-height: 1;
 }
 
 .tag-chip-cloud {
@@ -1157,6 +1152,7 @@ button:focus-visible {
 
 .entry-modal-date {
   grid-column: 1 / -1;
+  margin-bottom: 10px;
 }
 
 .segmented-stack {
@@ -1364,7 +1360,7 @@ button:focus-visible {
     gap: 4px;
   }
 
-  .date-picker-row {
+  .date-row {
     grid-template-columns: auto minmax(0, 1fr) auto;
   }
 

@@ -61,6 +61,10 @@ function shiftDateInputValue(dateValue: string, days: number) {
   return toDateInputValue(date);
 }
 
+function isTodayDateInputValue(dateValue: string) {
+  return dateValue === toDateInputValue(new Date());
+}
+
 function getBloodPressurePeriodLabel(period: BloodPressurePeriod) {
   if (period === "morning") {
     return "Morning";
@@ -404,11 +408,10 @@ function BloodPressureEntryModal({
 }) {
   const systolicInputRef = useRef<HTMLInputElement>(null);
   const diastolicInputRef = useRef<HTMLInputElement>(null);
-  const dateInputRef = useRef<HTMLInputElement>(null);
-  const dateButtonRef = useRef<HTMLButtonElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
   const manualMeasurementTags = measurementTags.filter((tag) => !isAutomaticMeasurementTagName(tag.name));
   const selectedTags = manualMeasurementTags.filter((tag) => selectedTagIds.includes(tag.id));
+  const isToday = isTodayDateInputValue(measuredDay);
 
   useEffect(() => {
     if (!isOpen) {
@@ -473,6 +476,35 @@ function BloodPressureEntryModal({
               </p>
             ) : null}
 
+            <div className="field field-wide entry-modal-field entry-modal-date">
+              <div className="date-row">
+                <button
+                  className="date-step-button"
+                  type="button"
+                  aria-label="Previous day"
+                  onClick={() => setMeasuredDay(shiftDateInputValue(measuredDay, -1))}
+                >
+                  ←
+                </button>
+                <div className="date-label" aria-live="polite">
+                  {formatMeasurementDayLabel(measuredDay)}
+                </div>
+                <button
+                  className="date-step-button"
+                  type="button"
+                  aria-label="Next day"
+                  disabled={isToday}
+                  onClick={() => {
+                    if (!isToday) {
+                      setMeasuredDay(shiftDateInputValue(measuredDay, 1));
+                    }
+                  }}
+                >
+                  →
+                </button>
+              </div>
+            </div>
+
             <div className="entry-modal-grid">
               <label className="field field-compact entry-modal-field">
                 <span>Systolic</span>
@@ -503,7 +535,7 @@ function BloodPressureEntryModal({
                   ref={diastolicInputRef}
                   aria-label="Diastolic"
                   autoComplete="off"
-                  enterKeyHint="next"
+                  enterKeyHint="done"
                   inputMode="numeric"
                   name="diastolic"
                   type="number"
@@ -514,60 +546,11 @@ function BloodPressureEntryModal({
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
                       event.preventDefault();
-                      dateButtonRef.current?.focus();
+                      tagInputRef.current?.focus();
                     }
                   }}
                 />
               </label>
-
-              <div className="field field-wide entry-modal-field entry-modal-date">
-                <span>Date</span>
-                <div className="date-picker-row">
-                  <button
-                    className="date-step-button"
-                    type="button"
-                    aria-label="Previous day"
-                    onClick={() => setMeasuredDay(shiftDateInputValue(measuredDay, -1))}
-                  >
-                    −
-                  </button>
-                  <button
-                    ref={dateButtonRef}
-                    className="date-picker-button"
-                    type="button"
-                    onClick={() => {
-                      const input = dateInputRef.current;
-                      if (input?.showPicker) {
-                        input.showPicker();
-                        return;
-                      }
-
-                      input?.click();
-                    }}
-                  >
-                    {formatMeasurementDayLabel(measuredDay)}
-                  </button>
-                  <button
-                    className="date-step-button"
-                    type="button"
-                    aria-label="Next day"
-                    onClick={() => setMeasuredDay(shiftDateInputValue(measuredDay, 1))}
-                  >
-                    +
-                  </button>
-                </div>
-                <input
-                  ref={dateInputRef}
-                  className="date-native-input"
-                  enterKeyHint="done"
-                  name="measured_day"
-                  type="date"
-                  value={measuredDay}
-                  onChange={(event) => setMeasuredDay(event.target.value)}
-                  tabIndex={-1}
-                  aria-hidden="true"
-                />
-              </div>
             </div>
 
             <div className="chip-stack" aria-label="Measurement tags">

@@ -450,11 +450,11 @@ button:focus-visible {
   background: transparent;
   color: var(--ink);
   font: inherit;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .date-step-button {
-  width: 38px;
+  width: 48px;
   padding: 0;
   display: inline-flex;
   align-items: center;
@@ -947,11 +947,38 @@ button:focus-visible {
   min-width: 0;
 }
 
+.summary-carousel {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.summary-carousel-track {
+  display: flex;
+  min-width: 0;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  touch-action: pan-x pan-y;
+}
+
+.summary-carousel-track::-webkit-scrollbar {
+  display: none;
+}
+
+.summary-carousel-panel {
+  flex: 0 0 100%;
+  min-width: 0;
+  scroll-snap-align: start;
+}
+
 .latest-reading-card {
   position: relative;
   display: grid;
   gap: 12px;
   min-width: 0;
+  width: 100%;
   padding: 18px 18px 16px;
   overflow: hidden;
   border: 0;
@@ -1101,19 +1128,14 @@ button:focus-visible {
   text-transform: uppercase;
 }
 
+.latest-reading-tag-empty {
+  opacity: 0.52;
+}
+
 .latest-reading-arrow {
   position: absolute;
   top: 18px;
   z-index: 2;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: rgba(245, 247, 250, 0.96);
-  box-shadow: none;
-  font-size: 2rem;
-  line-height: 1;
 }
 
 .latest-reading-arrow-left {
@@ -1128,12 +1150,34 @@ button:focus-visible {
   opacity: 0.28;
 }
 
-.latest-reading-indicator {
+.summary-carousel-indicator {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 6px;
-  min-height: 14px;
+  gap: 8px;
+  min-height: 18px;
+}
+
+.summary-carousel-dot {
+  display: block;
+  width: 8px;
+  height: 8px;
+  min-width: 8px;
+  min-height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.42);
+  box-shadow: none;
+  opacity: 0.9;
+  line-height: 0;
+  flex: 0 0 auto;
+}
+
+.summary-carousel-dot-active {
+  background: #f4f6fb;
+  opacity: 1;
+  box-shadow: 0 0 0 3px rgba(244, 246, 251, 0.05);
 }
 
 .latest-reading-indicator-dot {
@@ -1148,6 +1192,18 @@ button:focus-visible {
   height: 8px;
   background: #f4f6fb;
   box-shadow: 0 0 0 3px rgba(244, 246, 251, 0.05);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .dashboard-top {
@@ -1520,13 +1576,6 @@ button:focus-visible {
 
   .latest-reading-value {
     font-size: clamp(2.45rem, 17vw, 3.45rem);
-  }
-
-  .latest-reading-arrow {
-    top: 14px;
-    width: 36px;
-    height: 36px;
-    font-size: 1.8rem;
   }
 
   .tag-entry-row {

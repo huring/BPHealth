@@ -40,6 +40,11 @@ type ChartPoint = {
   y: number;
 };
 
+type AverageReading = {
+  systolic: number;
+  diastolic: number;
+};
+
 type BloodPressureLevel = "low" | "normal" | "elevated" | "high" | "very-high";
 
 type BloodPressureRange = "1d" | "1w" | "1m" | "1y" | "all";
@@ -303,6 +308,50 @@ function getBloodPressureLevelForValue(
   return "normal";
 }
 
+function getAverageReading(readings: BloodPressureReading[]) {
+  if (readings.length === 0) {
+    return null;
+  }
+
+  const totalSystolic = readings.reduce((sum, reading) => sum + reading.systolic, 0);
+  const totalDiastolic = readings.reduce((sum, reading) => sum + reading.diastolic, 0);
+
+  return {
+    systolic: Math.round(totalSystolic / readings.length),
+    diastolic: Math.round(totalDiastolic / readings.length),
+  } satisfies AverageReading;
+}
+
+function getMostCommonMeasurementTags(
+  readings: BloodPressureReading[],
+  tagIdsByReadingId: Record<string, string[]>,
+  tagsById: Record<string, MeasurementTagRow>,
+  limit = 2,
+) {
+  const counts = new Map<string, number>();
+
+  readings.forEach((reading) => {
+    const tagIds = tagIdsByReadingId[reading.id] ?? [];
+    tagIds.forEach((tagId) => {
+      counts.set(tagId, (counts.get(tagId) ?? 0) + 1);
+    });
+  });
+
+  return Array.from(counts.entries())
+    .sort((left, right) => {
+      if (right[1] !== left[1]) {
+        return right[1] - left[1];
+      }
+
+      const leftTag = tagsById[left[0]];
+      const rightTag = tagsById[right[0]];
+      return (leftTag?.name ?? "").localeCompare(rightTag?.name ?? "");
+    })
+    .slice(0, limit)
+    .map(([tagId]) => tagsById[tagId]?.name.toUpperCase())
+    .filter((tag): tag is string => Boolean(tag));
+}
+
 function formatLatestReadingDayLabel(measuredAt: string) {
   const date = new Date(measuredAt);
   return getRelativeDayLabel(date) ?? formatPrettyDate(date, false, false);
@@ -395,6 +444,107 @@ function ChipButton({
   );
 }
 
+function BloodPressureSummaryCard({
+  title,
+  subtitle,
+  systolic,
+  diastolic,
+  systolicLevel,
+  diastolicLevel,
+  tags,
+  showArrows = false,
+  hasPrevious = false,
+  hasNext = false,
+  onPrevious,
+  onNext,
+  previousLabel = "Previous measurement",
+  nextLabel = "Next measurement",
+}: {
+  title: string;
+  subtitle: string;
+  systolic: number | null;
+  diastolic: number | null;
+  systolicLevel: BloodPressureLevel;
+  diastolicLevel: BloodPressureLevel;
+  tags: string[];
+  showArrows?: boolean;
+  hasPrevious?: boolean;
+  hasNext?: boolean;
+  onPrevious?: () => void;
+  onNext?: () => void;
+  previousLabel?: string;
+  nextLabel?: string;
+}) {
+  return (
+    <article className="latest-reading-card">
+      {showArrows ? (
+        <>
+          <button
+            aria-label={previousLabel}
+            className="date-step-button latest-reading-arrow latest-reading-arrow-left"
+            disabled={!hasPrevious}
+            type="button"
+            onClick={onPrevious}
+          >
+            ←
+          </button>
+
+          <button
+            aria-label={nextLabel}
+            className="date-step-button latest-reading-arrow latest-reading-arrow-right"
+            disabled={!hasNext}
+            type="button"
+            onClick={onNext}
+          >
+            →
+          </button>
+        </>
+      ) : null}
+
+      <div className="latest-reading-header">
+        <p className="latest-reading-kicker">{title}</p>
+        <p className="latest-reading-day">{subtitle}</p>
+      </div>
+
+      <div className="latest-reading-body">
+        <div className={`latest-reading-row latest-reading-row--${systolicLevel}`}>
+          <span className="latest-reading-label">Systolic</span>
+          <div className="latest-reading-value-row">
+            <span className="latest-reading-dot" aria-hidden="true" />
+            <strong className="latest-reading-value latest-reading-value-systolic">
+              {systolic ?? "--"}
+            </strong>
+            <span className="latest-reading-unit">mmHg</span>
+          </div>
+        </div>
+
+        <div className={`latest-reading-row latest-reading-row--${diastolicLevel}`}>
+          <span className="latest-reading-label">Diastolic</span>
+          <div className="latest-reading-value-row">
+            <span className="latest-reading-dot" aria-hidden="true" />
+            <strong className="latest-reading-value latest-reading-value-diastolic">
+              {diastolic ?? "--"}
+            </strong>
+            <span className="latest-reading-unit">mmHg</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="latest-reading-tags" aria-label="Measurement tags">
+        {tags.length === 0 ? (
+          <span className="latest-reading-tag latest-reading-tag-empty">NO TAGS</span>
+        ) : (
+          tags.map((tag) => (
+            <span key={tag} className="latest-reading-tag">
+              {tag}
+            </span>
+          ))
+        )}
+      </div>
+    </article>
+  );
+}
+
 function LatestReadingCard({
   readings,
   measurementTagsByReadingId,
@@ -481,72 +631,137 @@ function LatestReadingCard({
   }
 
   return (
-    <section className="latest-reading-shell" aria-label="Latest blood pressure reading">
-      <div className="latest-reading-card">
-        <button
-          aria-label="Previous measurement"
-          className="latest-reading-arrow latest-reading-arrow-left"
-          disabled={!hasPrevious}
-          type="button"
-          onClick={showPreviousReading}
-        >
-          ←
-        </button>
+    <BloodPressureSummaryCard
+      title={isLatestReading ? "LATEST READING" : "READING"}
+      subtitle={readingDayLabel}
+      systolic={visibleReading ? visibleReading.systolic : null}
+      diastolic={visibleReading ? visibleReading.diastolic : null}
+      systolicLevel={systolicLevel}
+      diastolicLevel={diastolicLevel}
+      tags={readingTags}
+      showArrows
+      hasPrevious={hasPrevious}
+      hasNext={hasNext}
+      onPrevious={showPreviousReading}
+      onNext={showNextReading}
+      previousLabel="Previous measurement"
+    nextLabel="Next measurement"
+    />
+  );
+}
 
-        <button
-          aria-label="Next measurement"
-          className="latest-reading-arrow latest-reading-arrow-right"
-          disabled={!hasNext}
-          type="button"
-          onClick={showNextReading}
-        >
-          →
-        </button>
+function AverageReadingCard({
+  readings,
+  measurementTagIdsByReadingId,
+  measurementTagsById,
+  isLoading,
+}: {
+  readings: BloodPressureReading[];
+  measurementTagIdsByReadingId: Record<string, string[]>;
+  measurementTagsById: Record<string, MeasurementTagRow>;
+  isLoading: boolean;
+}) {
+  const averageReading = getAverageReading(readings);
+  const tags = getMostCommonMeasurementTags(readings, measurementTagIdsByReadingId, measurementTagsById, 2);
+  const systolic = averageReading ? averageReading.systolic : null;
+  const diastolic = averageReading ? averageReading.diastolic : null;
+  const systolicLevel = systolic ? getBloodPressureLevelForValue(systolic, "systolic") : "normal";
+  const diastolicLevel = diastolic ? getBloodPressureLevelForValue(diastolic, "diastolic") : "normal";
+  const subtitle = isLoading
+    ? "Loading readings..."
+    : readings.length > 0
+      ? `Based on ${readings.length} readings`
+      : "No readings in selection";
 
-        <div className="latest-reading-header">
-          <p className="latest-reading-kicker">{isLatestReading ? "LATEST READING" : "READING"}</p>
-          <p className="latest-reading-day" suppressHydrationWarning>
-            {readingDayLabel}
-          </p>
-        </div>
+  return (
+    <BloodPressureSummaryCard
+      title="AVERAGE READING"
+      subtitle={subtitle}
+      systolic={systolic}
+      diastolic={diastolic}
+      systolicLevel={systolicLevel}
+      diastolicLevel={diastolicLevel}
+      tags={tags}
+    />
+  );
+}
 
-        <div className="latest-reading-body">
-          <div className={`latest-reading-row latest-reading-row--${systolicLevel}`}>
-            <span className="latest-reading-label">Systolic</span>
-            <div className="latest-reading-value-row">
-              <span className="latest-reading-dot" aria-hidden="true" />
-              <strong className="latest-reading-value latest-reading-value-systolic">
-                {visibleReading ? visibleReading.systolic : "--"}
-              </strong>
-              <span className="latest-reading-unit">mmHg</span>
-            </div>
-          </div>
+function ReadingSummaryCarousel({
+  latestCard,
+  averageCard,
+}: {
+  latestCard: ReactNode;
+  averageCard: ReactNode;
+}) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [activePanel, setActivePanel] = useState<"latest" | "average">("latest");
 
-          <div className={`latest-reading-row latest-reading-row--${diastolicLevel}`}>
-            <span className="latest-reading-label">Diastolic</span>
-            <div className="latest-reading-value-row">
-              <span className="latest-reading-dot" aria-hidden="true" />
-              <strong className="latest-reading-value latest-reading-value-diastolic">
-                {visibleReading ? visibleReading.diastolic : "--"}
-              </strong>
-              <span className="latest-reading-unit">mmHg</span>
-            </div>
-          </div>
-        </div>
+  useEffect(() => {
+    const trackElement = trackRef.current;
+    if (!trackElement) {
+      return;
+    }
+    const scrollTrack = trackElement;
 
-        <div className="latest-reading-tags" aria-label="Measurement tags">
-          {readingTags.map((tag) => (
-            <span key={tag} className="latest-reading-tag">
-              {tag}
-            </span>
-          ))}
+    let raf = 0;
+
+    function updateActivePanel() {
+      cancelAnimationFrame(raf);
+      raf = window.requestAnimationFrame(() => {
+        const threshold = scrollTrack.clientWidth / 2;
+        setActivePanel(scrollTrack.scrollLeft >= threshold ? "average" : "latest");
+      });
+    }
+
+    trackElement.addEventListener("scroll", updateActivePanel, { passive: true });
+
+    return () => {
+      trackElement.removeEventListener("scroll", updateActivePanel);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  function scrollToPanel(panel: "latest" | "average") {
+    const trackElement = trackRef.current;
+    if (!trackElement) {
+      return;
+    }
+
+    trackElement.scrollTo({
+      left: panel === "average" ? trackElement.clientWidth : 0,
+      behavior: "smooth",
+    });
+    setActivePanel(panel);
+  }
+
+  return (
+    <section className="latest-reading-shell" aria-label="Blood pressure summary cards">
+      <div className="summary-carousel" aria-live="polite">
+        <div ref={trackRef} className="summary-carousel-track">
+          <div className="summary-carousel-panel">{latestCard}</div>
+          <div className="summary-carousel-panel">{averageCard}</div>
         </div>
       </div>
 
-      <div className="latest-reading-indicator" aria-hidden="true">
-        <span className="latest-reading-indicator-dot latest-reading-indicator-dot-active" />
-        <span className="latest-reading-indicator-dot" />
-        <span className="latest-reading-indicator-dot" />
+      <div className="summary-carousel-indicator" aria-label="Summary panels">
+        <button
+          aria-label="Show latest reading"
+          aria-pressed={activePanel === "latest"}
+          className={`summary-carousel-dot${activePanel === "latest" ? " summary-carousel-dot-active" : ""}`}
+          type="button"
+          onClick={() => scrollToPanel("latest")}
+        >
+          <span className="sr-only">Latest reading</span>
+        </button>
+        <button
+          aria-label="Show average reading"
+          aria-pressed={activePanel === "average"}
+          className={`summary-carousel-dot${activePanel === "average" ? " summary-carousel-dot-active" : ""}`}
+          type="button"
+          onClick={() => scrollToPanel("average")}
+        >
+          <span className="sr-only">Average reading</span>
+        </button>
       </div>
     </section>
   );
@@ -1530,10 +1745,22 @@ export default function HomePage() {
     <main className="shell app-shell">
       <InstallPrompt />
       <div className="dashboard-top">
-        <LatestReadingCard
-          readings={chronologicalReadings}
-          measurementTagsByReadingId={measurementTagsByReadingId}
-          isLoading={isLoading}
+        <ReadingSummaryCarousel
+          latestCard={
+            <LatestReadingCard
+              readings={chronologicalReadings}
+              measurementTagsByReadingId={measurementTagsByReadingId}
+              isLoading={isLoading}
+            />
+          }
+          averageCard={
+            <AverageReadingCard
+              readings={rangeReadings}
+              measurementTagIdsByReadingId={measurementTagIdsByReadingId}
+              measurementTagsById={measurementTagsById}
+              isLoading={isLoading}
+            />
+          }
         />
 
         <section className="page-section" id="chart">

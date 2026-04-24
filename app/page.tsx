@@ -1383,12 +1383,12 @@ export default function HomePage() {
           {isLoading ? (
             <p className="status">Loading chart...</p>
           ) : (
-            <BloodPressureChart
-              readings={readings}
-              timeRange={chartRange}
-              onTimeRangeChange={setChartRange}
-              preferRelativeDates={isMounted}
-            />
+          <BloodPressureChart
+            readings={filteredChronologicalReadings}
+            timeRange={chartRange}
+            onTimeRangeChange={setChartRange}
+            preferRelativeDates={isMounted}
+          />
           )}
         </section>
 
